@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, Fornecedor, FornecedorStats } from "../../../src/lib/api";
 import { ArrowLeft, MapPin, Phone, Mail, Building2, Clock, CheckCircle, XCircle, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { StatCard } from "../../../src/components/ui/StatCard";
+import { StatCard, StatCardProps } from "../../../src/components/ui/StatCard";
 
 export default function SupplierDetailPage({ params }: { params: { id: string } }) {
     const router = useRouter();
@@ -59,34 +59,34 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
         );
     }
 
-    const kpis = [
+    const kpis: StatCardProps[] = [
         {
             title: "Total Cotações",
             value: stats?.totalCotacoes.toString() || "0",
             icon: FileText,
             trend: { value: 0, isPositive: true },
-            variant: "primary" as const,
+            variant: "glass-blue" as const,
         },
         {
             title: "Aprovadas",
             value: stats?.cotacoesAprovadas.toString() || "0",
             icon: CheckCircle,
             trend: { value: stats?.taxaAprovacao || 0, isPositive: true },
-            variant: "secondary" as const,
+            variant: "glass-purple" as const,
         },
         {
             title: "Taxa Aprovação",
             value: stats?.taxaAprovacao ? `${stats.taxaAprovacao}%` : "0%",
             icon: CheckCircle,
             trend: { value: 0, isPositive: true },
-            variant: "accent" as const,
+            variant: "glass-cyan" as const,
         },
         {
             title: "Tempo Médio",
             value: stats?.tempoMedioResposta ? `${stats.tempoMedioResposta}h` : "-",
             icon: Clock,
             trend: { value: 0, isPositive: false },
-            variant: "primary" as const,
+            variant: "glass-orange" as const,
         },
     ];
 
