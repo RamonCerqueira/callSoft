@@ -6,7 +6,7 @@ import { Button } from "../../src/components/ui/button";
 import { Input } from "../../src/components/ui/Input";
 import { Search, Filter, Download, MessageCircle, Eye } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { api, Ticket } from "../../src/lib/api";
+import { api, Ticket, TicketListResponse } from "../../src/lib/api";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getUserFromToken } from "../../src/lib/auth";
@@ -17,36 +17,79 @@ export default function TicketsPage() {
     const [statusFilter, setStatusFilter] = useState<string>("");
     const [dateFrom, setDateFrom] = useState<string>("");
     const [dateTo, setDateTo] = useState<string>("");
-    const [canal, setCanal] = useState<string>("");
+    const [priorityFilter, setPriorityFilter] = useState<string>("");
     const [searchText, setSearchText] = useState<string>("");
+    
+    // Create Ticket States
     const [showNew, setShowNew] = useState<boolean>(false);
     const [newLoading, setNewLoading] = useState<boolean>(false);
-    const [newContato, setNewContato] = useState<string>("");
-    const [newSolicitacao, setNewSolicitacao] = useState<string>("");
-    const [newCodEmp, setNewCodEmp] = useState<string>("");
-    const { data, isLoading, refetch } = useQuery<{ tickets: any[] }>({
-        queryKey: ["tickets"],
+    const [newClientName, setNewClientName] = useState("");
+    const [newClientEmail, setNewClientEmail] = useState("");
+    const [newClientPhone, setNewClientPhone] = useState("");
+    const [newSubject, setNewSubject] = useState("");
+    const [newDescription, setNewDescription] = useState("");
+    const [newPriority, setNewPriority] = useState<string>("MEDIA");
+
+    const { data, isLoading, refetch } = useQuery<TicketListResponse>({
+        queryKey: ["tickets", statusFilter, dateFrom, dateTo, priorityFilter],
         queryFn: async () => {
-            const res = await api.get("/tickets", {
+            const res = await api.get("/api/v1/tickets", {
                 params: {
                     status: statusFilter || undefined,
                     dateFrom: dateFrom || undefined,
                     dateTo: dateTo || undefined,
+                    priority: priorityFilter || undefined
                 },
             });
-            return { tickets: res.data as any[] };
+            return res.data;
         },
     });
 
     const getStatusBadge = (status: string) => {
         const variants = {
-            concluido: "success",
-            pendente: "warning",
-            "em_andamento": "info",
+            RESOLVIDO: "success",
+            FECHADO: "success",
+            NOVO: "warning",
+            ABERTO: "warning",
+            EM_ANDAMENTO: "info",
+            AGUARDANDO_CLIENTE: "warning",
+            AGUARDANDO_FORNECEDOR: "warning",
+            CANCELADO: "destructive",
         } as const;
 
         return variants[status as keyof typeof variants] || "default";
     };
+
+    const handleCreateTicket = async () => {
+        setNewLoading(true);
+        try {
+            await api.post("/api/v1/tickets", {
+                clientName: newClientName,
+                clientEmail: newClientEmail,
+                clientPhone: newClientPhone,
+                subject: newSubject,
+                description: newDescription,
+                priority: newPriority,
+                category: "SUPORTE" // Default category
+            });
+            setShowNew(false);
+            // Reset form
+            setNewClientName("");
+            setNewClientEmail("");
+            setNewClientPhone("");
+            setNewSubject("");
+            setNewDescription("");
+            setNewPriority("MEDIA");
+            
+            await refetch();
+        } catch (error) {
+            console.error("Error creating ticket:", error);
+        } finally {
+            setNewLoading(false);
+        }
+    };
+
+    const tickets = data?.data?.items || [];
 
     return (
         <div className="min-h-screen">
@@ -70,44 +113,48 @@ export default function TicketsPage() {
 
                     {/* Filters */}
                     <div className="glass rounded-lg p-4 mb-6 animate-slide-up">
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                            <div className="md:col-span-2">
+                        <div className="flex flex-col gap-4">
+                            {/* Search Bar - Full Width */}
+                            <div className="w-full">
                                 <Input
                                     type="search"
-                                    placeholder="Buscar por pedido, cliente..."
+                                    placeholder="Buscar por assunto, cliente..."
                                     value={searchText}
                                     onChange={(e) => setSearchText(e.target.value)}
                                     leftIcon={<Search className="h-4 w-4" />}
+                                    className="w-full"
                                 />
                             </div>
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100"
-                            >
-                                <option value="">Status</option>
-                                <option>Solicitado</option>
-                                <option>Recebido</option>
-                                <option>Em Cotação</option>
-                                <option>Cotado</option>
-                                <option>Faturado</option>
-                                <option>Expedido</option>
-                                <option>Cancelado</option>
-                                <option>Indeferido</option>
-                            </select>
-                            <select
-                                value={canal}
-                                onChange={(e) => setCanal(e.target.value)}
-                                className="rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100"
-                            >
-                                <option value="">Canal</option>
-                                <option value="WHATSAPP">WhatsApp</option>
-                                <option value="EMAIL">E-mail</option>
-                                <option value="WEB">Web</option>
-                            </select>
-                            <div className="flex gap-2">
-                                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+
+                            {/* Filters Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="w-full rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500"
+                                >
+                                    <option value="">Status</option>
+                                    <option value="NOVO">Novo</option>
+                                    <option value="ABERTO">Aberto</option>
+                                    <option value="EM_ANDAMENTO">Em Andamento</option>
+                                    <option value="RESOLVIDO">Resolvido</option>
+                                    <option value="CANCELADO">Cancelado</option>
+                                </select>
+                                <select
+                                    value={priorityFilter}
+                                    onChange={(e) => setPriorityFilter(e.target.value)}
+                                    className="w-full rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500"
+                                >
+                                    <option value="">Prioridade</option>
+                                    <option value="BAIXA">Baixa</option>
+                                    <option value="MEDIA">Média</option>
+                                    <option value="ALTA">Alta</option>
+                                    <option value="URGENTE">Urgente</option>
+                                </select>
+                                <div className="md:col-span-2 flex gap-2">
+                                    <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full" />
+                                    <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full" />
+                                </div>
                             </div>
                         </div>
                         <div className="mt-4 flex gap-3">
@@ -129,7 +176,10 @@ export default function TicketsPage() {
                                 <thead className="border-b border-white/10">
                                     <tr>
                                         <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            Pedido
+                                            Ticket ID
+                                        </th>
+                                        <th className="text-left p-4 text-sm font-semibold text-slate-300">
+                                            Assunto
                                         </th>
                                         <th className="text-left p-4 text-sm font-semibold text-slate-300">
                                             Cliente
@@ -138,13 +188,10 @@ export default function TicketsPage() {
                                             Status
                                         </th>
                                         <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            Data
+                                            Prioridade
                                         </th>
                                         <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            Hora Proposta
-                                        </th>
-                                        <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            WhatsApp
+                                            Criado em
                                         </th>
                                         <th className="text-left p-4 text-sm font-semibold text-slate-300">
                                             Ações
@@ -158,55 +205,67 @@ export default function TicketsPage() {
                                                 Carregando tickets...
                                             </td>
                                         </tr>
-                                    ) : (data?.tickets ?? []).length === 0 ? (
+                                    ) : tickets.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="p-8 text-center text-slate-400">
                                                 Nenhum ticket encontrado
                                             </td>
                                         </tr>
                                     ) : (
-                                        (data?.tickets ?? [])
+                                        tickets
                                             .filter((ticket) => {
-                                                const matchesSearch =
-                                                    !searchText ||
-                                                    `${ticket.pedido}`.includes(searchText) ||
-                                                    (ticket.contato || "").toLowerCase().includes(searchText.toLowerCase());
-                                                const matchesCanal = !canal || (ticket.canalOrigem || "") === canal;
-                                                return matchesSearch && matchesCanal;
+                                                if (!searchText) return true;
+                                                const searchLower = searchText.toLowerCase();
+                                                return (
+                                                    ticket.subject.toLowerCase().includes(searchLower) ||
+                                                    ticket.clientName.toLowerCase().includes(searchLower) ||
+                                                    ticket.numero.toString().includes(searchLower)
+                                                );
                                             })
                                             .map((ticket) => (
                                             <tr
-                                                key={ticket.pedido}
-                                                className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                                                onClick={() => router.push(`/tickets/${ticket.pedido}`)}
+                                                key={ticket.id}
+                                                className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                                                onClick={() => router.push(`/tickets/${ticket.id}`)}
                                             >
                                                 <td className="p-4 text-sm text-white font-medium">
-                                                    #{ticket.pedido}
+                                                    #{ticket.numero}
                                                 </td>
                                                 <td className="p-4 text-sm text-slate-300">
-                                                    Cliente {ticket.pedido}
+                                                    {ticket.subject}
+                                                </td>
+                                                <td className="p-4 text-sm text-slate-300">
+                                                    <div>
+                                                        <p className="text-white">{ticket.clientName}</p>
+                                                        <p className="text-xs text-slate-500">{ticket.clientEmail}</p>
+                                                    </div>
                                                 </td>
                                                 <td className="p-4">
                                                     <Badge variant={getStatusBadge(ticket.status)}>
-                                                        {ticket.status.replace("_", " ")}
+                                                        {ticket.status.replace(/_/g, " ")}
+                                                    </Badge>
+                                                </td>
+                                                <td className="p-4">
+                                                    <Badge variant={
+                                                        ticket.priority === 'URGENTE' ? 'destructive' :
+                                                        ticket.priority === 'ALTA' ? 'warning' :
+                                                        ticket.priority === 'MEDIA' ? 'info' : 'default'
+                                                    }>
+                                                        {ticket.priority}
                                                     </Badge>
                                                 </td>
                                                 <td className="px-4 text-sm text-slate-300">
-                                                    {new Date(ticket.data).toLocaleDateString("pt-BR")}
+                                                    {new Date(ticket.createdAt).toLocaleDateString("pt-BR")}
                                                 </td>
-                                                <td className="p-4 text-sm text-slate-300">
-                                                    {ticket.horaProposta || "-"}
-                                                </td>
-                                                <td className="p-4">
-                                                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-whatsapp/10 hover:bg-whatsapp/20 border border-whatsapp/20 text-whatsapp transition-colors">
-                                                        <MessageCircle className="h-4 w-4" />
-                                                        <span className="text-xs font-medium">Chat</span>
-                                                    </button>
-                                                </td>
-                                                <td className="p-4">
-                                                    <Button variant="ghost" size="sm">
+                                                <td className="p-4 flex gap-2">
+                                                    <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white">
                                                         <Eye className="h-4 w-4" />
-                                                    </Button>
+                                                    </button>
+                                                    {ticket.clientPhone && (
+                                                        <button className="p-2 hover:bg-whatsapp/20 rounded-lg transition-colors text-whatsapp">
+                                                            <MessageCircle className="h-4 w-4" />
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))
@@ -215,17 +274,31 @@ export default function TicketsPage() {
                             </table>
                         </div>
 
-                        {/* Pagination */}
-                        {data && (data.tickets ?? []).length > 0 && (
+                        {/* Pagination - Simple Implementation based on API response */}
+                        {data?.data && (
                             <div className="flex items-center justify-between p-4 border-t border-white/10">
                                 <p className="text-sm text-slate-400">
-                                    Mostrando {(data.tickets ?? []).length} tickets
+                                    Página {data.data.page} de {data.data.pages} (Total: {data.data.total})
                                 </p>
                                 <div className="flex gap-2">
-                                    <Button variant="outline" size="sm">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        disabled={data.data.page <= 1}
+                                        onClick={() => {
+                                            // Implement pagination logic if needed, e.g. state for page
+                                        }}
+                                    >
                                         Anterior
                                     </Button>
-                                    <Button variant="outline" size="sm">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        disabled={data.data.page >= data.data.pages}
+                                        onClick={() => {
+                                            // Implement pagination logic
+                                        }}
+                                    >
                                         Próxima
                                     </Button>
                                 </div>
@@ -234,39 +307,89 @@ export default function TicketsPage() {
                     </div>
                 </div>
             </main>
+            
             {showNew && (
-                <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
-                    <div className="glass rounded-xl w-full max-w-lg p-6">
-                        <h3 className="text-xl font-semibold text-white mb-4">Novo Ticket</h3>
-                        <div className="space-y-3">
-                            <Input placeholder="Contato (WhatsApp ou e-mail)" value={newContato} onChange={(e) => setNewContato(e.target.value)} />
-                            <Input placeholder="Solicitação" value={newSolicitacao} onChange={(e) => setNewSolicitacao(e.target.value)} />
-                            <Input placeholder="Empresa (código opcional)" value={newCodEmp} onChange={(e) => setNewCodEmp(e.target.value)} />
+                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+                    <div className="glass rounded-xl w-full max-w-lg p-6 animate-scale-in">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-semibold text-white">Novo Ticket</h3>
+                            <button onClick={() => setShowNew(false)} className="text-slate-400 hover:text-white">
+                                ✕
+                            </button>
                         </div>
-                        <div className="mt-6 flex justify-end gap-3">
+                        
+                        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Cliente *</label>
+                                <Input 
+                                    placeholder="Nome do cliente" 
+                                    value={newClientName} 
+                                    onChange={(e) => setNewClientName(e.target.value)} 
+                                />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1">Email *</label>
+                                    <Input 
+                                        placeholder="email@cliente.com" 
+                                        value={newClientEmail} 
+                                        onChange={(e) => setNewClientEmail(e.target.value)} 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1">Telefone</label>
+                                    <Input 
+                                        placeholder="+55 11 99999-9999" 
+                                        value={newClientPhone} 
+                                        onChange={(e) => setNewClientPhone(e.target.value)} 
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Assunto *</label>
+                                <Input 
+                                    placeholder="Resumo do problema" 
+                                    value={newSubject} 
+                                    onChange={(e) => setNewSubject(e.target.value)} 
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Prioridade</label>
+                                <select 
+                                    className="w-full rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500"
+                                    value={newPriority}
+                                    onChange={(e) => setNewPriority(e.target.value)}
+                                >
+                                    <option value="BAIXA">Baixa</option>
+                                    <option value="MEDIA">Média</option>
+                                    <option value="ALTA">Alta</option>
+                                    <option value="URGENTE">Urgente</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Descrição *</label>
+                                <textarea 
+                                    className="w-full rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500 min-h-[100px]"
+                                    placeholder="Detalhes completos da solicitação..."
+                                    value={newDescription}
+                                    onChange={(e) => setNewDescription(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-white/10">
                             <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
                             <Button
                                 variant="gradient"
                                 isLoading={newLoading}
-                                onClick={async () => {
-                                    setNewLoading(true);
-                                    try {
-                                        await api.post("/tickets", {
-                                            contato: newContato || null,
-                                            solicitacao: newSolicitacao,
-                                            codEmp: newCodEmp ? Number(newCodEmp) : null
-                                        });
-                                        setShowNew(false);
-                                        setNewContato("");
-                                        setNewSolicitacao("");
-                                        setNewCodEmp("");
-                                        await refetch();
-                                    } finally {
-                                        setNewLoading(false);
-                                    }
-                                }}
+                                onClick={handleCreateTicket}
+                                disabled={!newClientName || !newClientEmail || !newSubject || !newDescription}
                             >
-                                Salvar
+                                Criar Ticket
                             </Button>
                         </div>
                     </div>

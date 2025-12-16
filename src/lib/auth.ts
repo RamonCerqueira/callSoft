@@ -1,8 +1,10 @@
 export interface User {
   id: string;
+  name: string;
   email: string;
-  nome: string;
-  role?: string;
+  role: string;
+  permissions: string[];
+  createdAt?: string;
 }
 
 export function getUserFromToken(): User | null {
@@ -11,7 +13,7 @@ export function getUserFromToken(): User | null {
   }
 
   try {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("token");
     if (!token) {
       return null;
     }
@@ -24,10 +26,12 @@ export function getUserFromToken(): User | null {
 
     const decoded = JSON.parse(atob(payload));
     return {
-      id: decoded.userId || decoded.id,
+      id: decoded.id,
+      name: decoded.name,
       email: decoded.email,
-      nome: decoded.nome || decoded.name,
       role: decoded.role,
+      permissions: decoded.permissions || [],
+      createdAt: decoded.createdAt
     };
   } catch (error) {
     console.error("Error decoding token:", error);
@@ -37,13 +41,13 @@ export function getUserFromToken(): User | null {
 
 export function setAuthToken(token: string): void {
   if (typeof window !== "undefined") {
-    localStorage.setItem("authToken", token);
+    localStorage.setItem("token", token);
   }
 }
 
 export function clearAuthToken(): void {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("authToken");
+    localStorage.removeItem("token");
   }
 }
 
@@ -51,5 +55,5 @@ export function getAuthToken(): string | null {
   if (typeof window === "undefined") {
     return null;
   }
-  return localStorage.getItem("authToken");
+  return localStorage.getItem("token");
 }

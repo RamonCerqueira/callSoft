@@ -4,21 +4,91 @@ import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Input } from "../../src/components/ui/Input";
 import { Button } from "../../src/components/ui/button";
 import { useRouter } from "next/navigation";
+import { api } from "../../src/lib/api";
+import { setAuthToken } from "../../src/lib/auth";
+import { useNotificationStore } from "../../src/store/notificationStore";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../src/components/ui/dialog";
 
 export default function LoginPage() {
     const router = useRouter();
+    const { addNotification } = useNotificationStore();
+    
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isResetOpen, setIsResetOpen] = useState(false);
+    const [resetEmail, setResetEmail] = useState("");
+    const [isResetLoading, setIsResetLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
-        // Simulate API call
-        setTimeout(() => {
+        try {
+            const res = await api.post("/api/v1/auth/login", {
+                email,
+                password,
+                tenantId: process.env.NEXT_PUBLIC_TENANT_ID
+            });
+
+            const { success, data } = res.data;
+            
+            if (success && data?.token) {
+                setAuthToken(data.token);
+                // Opcional: Salvar dados do usuário se necessário
+                // localStorage.setItem("user", JSON.stringify(data.user));
+
+                addNotification({
+                    title: "Bem-vindo!",
+                    message: `Login realizado com sucesso. Olá, ${data.user.name}!`,
+                    type: "success",
+                    category: "system"
+                });
+                router.push("/dashboard"); 
+            } else {
+                throw new Error("Resposta inválida do servidor");
+            }
+
+        } catch (error: any) {
+            console.error("Login error:", error);
+            addNotification({
+                title: "Erro no Login",
+                message: error.response?.data?.message || "Falha ao autenticar. Verifique suas credenciais.",
+                type: "error",
+                category: "security"
+            });
+        } finally {
             setIsLoading(false);
-            router.push("/dashboard");
-        }, 1500);
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsResetLoading(true);
+        try {
+            await api.post("/api/v1/auth/password-reset/request", {
+                email: resetEmail,
+                tenantId: process.env.NEXT_PUBLIC_TENANT_ID
+            });
+            addNotification({
+                title: "Email Enviado",
+                message: "Verifique sua caixa de entrada para redefinir a senha.",
+                type: "success",
+                category: "system"
+            });
+            setIsResetOpen(false);
+            setResetEmail("");
+        } catch (error: any) {
+             addNotification({
+                title: "Erro",
+                message: error.response?.data?.message || "Falha ao solicitar redefinição.",
+                type: "error",
+                category: "system"
+            });
+        } finally {
+            setIsResetLoading(false);
+        }
     };
 
     return (
@@ -71,13 +141,15 @@ export default function LoginPage() {
                             {/* Login */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                                    Login
+                                    Email
                                 </label>
                                 <Input
-                                    type="text"
-                                    placeholder="Digite seu login"
+                                    type="email"
+                                    placeholder="admin@callsoft.com"
                                     leftIcon={<Mail className="h-4 w-4" />}
                                     required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                 />
                             </div>
 
@@ -104,48 +176,60 @@ export default function LoginPage() {
                                         </button>
                                     }
                                     required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                 />
                             </div>
 
-                            {/* Remember & Forgot */}
-                            <div className="flex items-center justify-between">
-                                <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="h-4 w-4 rounded border-slate-700 bg-slate-dark text-purple-600 focus:ring-purple-500 focus:ring-offset-navy-deep"
-                                    />
-                                    Lembrar-me
-                                </label>
-                                <a
-                                    href="#"
+                            <div className="flex justify-end mb-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsResetOpen(true)}
                                     className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
                                 >
                                     Esqueceu a senha?
-                                </a>
+                                </button>
                             </div>
 
-                            {/* Submit Button */}
                             <Button
                                 type="submit"
-                                variant="gradient"
-                                className="w-full"
-                                size="lg"
-                                isLoading={isLoading}
+                                className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
+                                disabled={isLoading}
                             >
                                 {isLoading ? "Entrando..." : "Entrar"}
                             </Button>
                         </form>
-
-                        {/* Footer */}
-                        <p className="mt-6 text-center text-sm text-slate-400">
-                            Não tem uma conta?{" "}
-                            <a href="#" className="text-purple-400 hover:text-purple-300 font-medium">
-                                Entre em contato
-                            </a>
-                        </p>
                     </div>
                 </div>
             </div>
+
+            {/* Reset Password Dialog */}
+            <Dialog open={isResetOpen} onOpenChange={setIsResetOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Redefinir Senha</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-slate-400 mb-4 text-sm">
+                        Digite seu email para receber o link de redefinição.
+                    </p>
+                    <form onSubmit={handleResetPassword} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+                            <Input 
+                                type="email" 
+                                placeholder="seu@email.com" 
+                                value={resetEmail} 
+                                onChange={e => setResetEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <Button type="button" variant="outline" onClick={() => setIsResetOpen(false)}>Cancelar</Button>
+                            <Button type="submit" variant="gradient" isLoading={isResetLoading}>Enviar</Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

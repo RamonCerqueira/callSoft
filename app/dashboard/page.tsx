@@ -4,55 +4,78 @@ import { Header } from "../../src/components/layout/Header";
 import { StatCard } from "../../src/components/ui/StatCard";
 import { StatusPieChart } from "../../src/components/charts/StatusPieChart";
 import { OpenTicketsKpi } from "../../src/components/ui/KpiCard";
-import { Ticket, MessageCircle, CheckCircle, Clock } from "lucide-react";
+import { Ticket as TicketIcon, MessageCircle, CheckCircle, Clock } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../../src/components/ui/Card";
+import { Button } from "../../src/components/ui/button";
+import { Badge } from "../../src/components/ui/Badge";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { api, TicketMetrics, TicketListResponse } from "../../src/lib/api";
 
 export default function DashboardPage() {
+    const { data: metrics, isLoading: isLoadingMetrics } = useQuery<TicketMetrics>({
+        queryKey: ["dashboard-metrics"],
+        queryFn: async () => {
+            const res = await api.get("/api/v1/dashboard/metrics");
+            return res.data;
+        }
+    });
+
+    const { data: recentTicketsData, isLoading: isLoadingTickets } = useQuery<TicketListResponse>({
+        queryKey: ["recent-tickets"],
+        queryFn: async () => {
+            const res = await api.get("/api/v1/tickets", { params: { page: 1, limit: 5 } });
+            return res.data;
+        }
+    });
+
     const stats = [
         {
             title: "Total de Tickets",
-            value: "5,240",
-            icon: Ticket,
-            trend: { value: 12, isPositive: true },
-            variant: "primary" as const,
+            value: metrics?.totais.total.toString() || "0",
+            icon: TicketIcon,
+            trend: { value: 0, isPositive: true },
+            variant: "glass-blue" as const,
         },
         {
-            title: "Mensagens WhatsApp",
-            value: "32,500",
+            title: "Novos Tickets",
+            value: metrics?.totais.novos.toString() || "0",
             icon: MessageCircle,
-            trend: { value: 8, isPositive: true },
-            variant: "secondary" as const,
+            trend: { value: 0, isPositive: true },
+            variant: "glass-cyan" as const,
         },
         {
-            title: "Tickets Concluídos",
-            value: "4,980",
+            title: "Tickets Resolvidos",
+            value: metrics?.totais.resolvidos.toString() || "0",
             icon: CheckCircle,
-            trend: { value: 15, isPositive: true },
-            variant: "accent" as const,
+            trend: { value: metrics?.taxas.taxaResolucao || 0, isPositive: true },
+            variant: "glass-purple" as const,
         },
         {
-            title: "Tempo Médio",
-            value: "12m 30s",
+            title: "Tempo Médio (min)",
+            value: metrics?.tempos.tempoMedioResolucao ? Math.round(metrics.tempos.tempoMedioResolucao / 60).toString() : "0",
             icon: Clock,
-            trend: { value: -5, isPositive: false },
-            variant: "primary" as const,
+            trend: { value: 0, isPositive: false },
+            variant: "glass-pink" as const,
         },
     ];
-    const chamadosEmAberto = 145;
-    const lineData = [
-        { name: "Oct 1", value: 520 }, { name: "Oct 5", value: 610 }, { name: "Oct 10", value: 700 },
-        { name: "Oct 15", value: 680 }, { name: "Oct 20", value: 820 }, { name: "Oct 25", value: 910 },
-        { name: "Nov 1", value: 980 }, { name: "Nov 5", value: 1020 }, { name: "Nov 10", value: 1100 },
-        { name: "Nov 15", value: 1250 }, { name: "Nov 20", value: 1320 }, { name: "Nov 30", value: 1500 }
-    ];
-    const pieData = [
-        { name: "Solicitado", value: 45, color: "#8b5cf6" },
-        { name: "Recebido", value: 20, color: "#06b6d4" },
-        { name: "Em Cotação", value: 15, color: "#f59e0b" },
-        { name: "Cotado", value: 10, color: "#22c55e" },
-        { name: "Cancelado", value: 5, color: "#ef4444" }
-    ];
+
+    const chamadosEmAberto = metrics ? (metrics.totais.abertos + metrics.totais.emAndamento) : 0;
+
+    const lineData = metrics?.distribuicao.porDia.map(d => ({
+        name: new Date(d.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
+        value: d.total
+    })) || [];
+
+    const pieData = metrics ? [
+        { name: "Novos", value: metrics.totais.novos, color: "#f59e0b" },
+        { name: "Abertos", value: metrics.totais.abertos, color: "#3b82f6" },
+        { name: "Em Andamento", value: metrics.totais.emAndamento, color: "#8b5cf6" },
+        { name: "Resolvidos", value: metrics.totais.resolvidos, color: "#22c55e" },
+        { name: "Cancelados", value: metrics.totais.cancelados, color: "#ef4444" }
+    ] : [];
+
+    const recentTickets = recentTicketsData?.data.items || [];
 
     return (
         <div className="min-h-screen">
@@ -61,116 +84,205 @@ export default function DashboardPage() {
 
             <main className="ml-64 pt-16">
                 <div className="p-8">
-                    <div className="mb-8 animate-slide-up">
-                        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-                        <p className="mt-2 text-slate-400">
-                            Bem-vindo ao CALLSOFT - Gestão de Tickets e WhatsApp
-                        </p>
+                    {/* Header Section matching reference */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 animate-slide-up gap-4">
+                        <div>
+                            <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+                                <span className="w-2 h-8 bg-blue-500 rounded-full inline-block"></span>
+                                CALLSOFT Analytics
+                            </h1>
+                            <p className="mt-1 text-slate-400 text-sm ml-4">
+                                Visão geral de métricas e performance
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-300 flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-slate-400" />
+                                <span>Hoje: {new Date().toLocaleDateString('pt-BR')}</span>
+                            </div>
+                            <button className="bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm transition-colors">
+                                Export (PDF, CSV)
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="grid gap-6 lg:grid-cols-4 mb-8 animate-slide-up">
+                    {/* Metrics Grid */}
+                    <div className="grid gap-6 lg:grid-cols-5 mb-8 animate-slide-up">
                         <OpenTicketsKpi count={chamadosEmAberto} />
                         {stats.map((stat, index) => (
-                            <div key={stat.title} style={{ animationDelay: `${(index + 1) * 100}ms` }}>
+                            <div key={stat.title} className="h-full" style={{ animationDelay: `${(index + 1) * 100}ms` }}>
                                 <StatCard {...stat} />
                             </div>
                         ))}
                     </div>
 
-                    <div className="grid gap-6 lg:grid-cols-2 mb-8 animate-slide-up">
-                        <Card variant="glass">
-                            <CardHeader>
-                                <CardTitle>Ticket Volume (Últimos 30 dias)</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-[280px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={lineData}>
-                                            <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-                                            <XAxis dataKey="name" stroke="#94a3b8" />
-                                            <YAxis stroke="#94a3b8" />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: "rgba(15, 23, 42, 0.9)",
-                                                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                                                    borderRadius: "8px",
-                                                    color: "#fff"
-                                                }}
-                                            />
-                                            <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} dot={false} />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <StatusPieChart data={pieData} />
-                    </div>
-
-                    <div className="grid gap-6 lg:grid-cols-2 animate-slide-up">
-                        <div className="glass rounded-lg p-6">
-                            <h2 className="text-xl font-semibold text-white mb-4">
-                                Atividade Recente
-                            </h2>
-                            <div className="space-y-3">
-                                {[
-                                    { id: 1239, text: "Novo ticket criado", time: "há 5 min" },
-                                    { id: 1238, text: "Status atualizado para Em Atendimento", time: "há 12 min" },
-                                    { id: 1237, text: "Mensagem recebida via WhatsApp", time: "há 30 min" }
-                                ].map((i) => (
-                                    <div key={i.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-white">#{i.id}</p>
-                                            <p className="text-xs text-slate-400 mt-1">{i.text}</p>
-                                        </div>
-                                        <span className="text-xs text-slate-400">{i.time}</span>
+                    {/* Main Chart Section */}
+                    <div className="grid gap-6 lg:grid-cols-3 mb-8 animate-slide-up">
+                        <div className="lg:col-span-2">
+                            <Card variant="glass" className="h-full border-0 bg-slate-900/40">
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Tendência de Tickets (Últimos 30 dias)</CardTitle>
+                                        <p className="text-sm text-slate-400 mt-1">Volume diário de aberturas</p>
                                     </div>
-                                ))}
-                            </div>
+                                    <select className="bg-slate-800 border-slate-700 text-xs rounded px-2 py-1 text-slate-400">
+                                        <option>Automático</option>
+                                    </select>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-[350px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={lineData}>
+                                                <defs>
+                                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" vertical={false} />
+                                                <XAxis 
+                                                    dataKey="name" 
+                                                    stroke="#64748b" 
+                                                    tick={{fill: '#64748b', fontSize: 12}}
+                                                    tickLine={false}
+                                                    axisLine={false}
+                                                    dy={10}
+                                                />
+                                                <YAxis 
+                                                    stroke="#64748b" 
+                                                    tick={{fill: '#64748b', fontSize: 12}}
+                                                    tickLine={false}
+                                                    axisLine={false}
+                                                    dx={-10}
+                                                />
+                                                <Tooltip
+                                                    contentStyle={{
+                                                        backgroundColor: "rgba(15, 23, 42, 0.9)",
+                                                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                                                        borderRadius: "8px",
+                                                        color: "#fff",
+                                                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+                                                    }}
+                                                    itemStyle={{ color: "#fff" }}
+                                                    cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }}
+                                                />
+                                                <Line 
+                                                    type="monotone" 
+                                                    dataKey="value" 
+                                                    stroke="#8b5cf6" 
+                                                    strokeWidth={3}
+                                                    dot={{ r: 4, fill: "#8b5cf6", strokeWidth: 2, stroke: "#fff" }}
+                                                    activeDot={{ r: 6, fill: "#fff", stroke: "#8b5cf6" }}
+                                                    fill="url(#colorValue)"
+                                                />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
 
-                        <div className="glass rounded-lg p-6">
-                            <h2 className="text-xl font-semibold text-white mb-4">
-                                Últimos Tickets
-                            </h2>
-                            <div className="space-y-3">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="border-b border-white/10">
-                                            <tr>
-                                                <th className="text-left p-4 text-sm font-semibold text-slate-300">Ticket ID</th>
-                                                <th className="text-left p-4 text-sm font-semibold text-slate-300">Assunto</th>
-                                                <th className="text-left p-4 text-sm font-semibold text-slate-300">Solicitante</th>
-                                                <th className="text-left p-4 text-sm font-semibold text-slate-300">Status</th>
-                                                <th className="text-left p-4 text-sm font-semibold text-slate-300">Prioridade</th>
-                                                <th className="text-left p-4 text-sm font-semibold text-slate-300">Criado</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {[
-                                                { id: 1235, assunto: "Login Issue", solicitante: "Emily Davis", status: "Pendente", prioridade: "Alta", criado: "10:30 AM" },
-                                                { id: 1237, assunto: "Billing Question", solicitante: "Michael Brown", status: "Aberto", prioridade: "Média", criado: "11:15 AM" },
-                                                { id: 1238, assunto: "Feature Request - Dark Mode", solicitante: "Chris Wilson", status: "Em Atendimento", prioridade: "Baixa", criado: "Ontem" },
-                                                { id: 1239, assunto: "Integration Error", solicitante: "Jessica Lee", status: "Aberto", prioridade: "Alta", criado: "Ontem" }
-                                            ].map((row) => (
-                                                <tr key={row.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                                    <td className="p-4 text-sm text-white font-medium">#{row.id}</td>
-                                                    <td className="p-4 text-sm text-slate-300">{row.assunto}</td>
-                                                    <td className="p-4 text-sm text-slate-300">{row.solicitante}</td>
-                                                    <td className="p-4 text-sm">
-                                                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">{row.status}</span>
-                                                    </td>
-                                                    <td className="p-4 text-sm">
-                                                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-pink-500/10 text-pink-400 border border-pink-500/20">{row.prioridade}</span>
-                                                    </td>
-                                                    <td className="p-4 text-sm text-slate-300">{row.criado}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                        {/* Secondary Chart / Stats */}
+                        <div className="lg:col-span-1 flex flex-col gap-6">
+                            <Card variant="glass" className="flex-1 border-0 bg-slate-900/40">
+                                <CardHeader>
+                                    <CardTitle>Status dos Tickets</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-[300px]">
+                                        <StatusPieChart data={pieData} />
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     </div>
+                    
+                    {/* Recent Tickets Table */}
+                    <Card variant="glass" className="mb-8 animate-slide-up border-0 bg-slate-900/40">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle>Últimos Tickets</CardTitle>
+                                <p className="text-sm text-slate-400 mt-1">Acompanhe as solicitações mais recentes</p>
+                            </div>
+                            <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                                Ver todos
+                            </Button>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-white/5 text-left">
+                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ticket ID</th>
+                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Assunto</th>
+                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Solicitante</th>
+                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Prioridade</th>
+                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Criado</th>
+                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {isLoadingTickets ? (
+                                            <tr>
+                                                <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">
+                                                    <div className="flex justify-center items-center gap-2">
+                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                        Carregando...
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : recentTickets.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">Nenhum ticket recente.</td>
+                                            </tr>
+                                        ) : (
+                                            recentTickets.map((row) => (
+                                            <tr key={row.id} className="hover:bg-white/5 transition-colors group">
+                                                <td className="p-4 text-sm text-white font-medium">#{row.numero}</td>
+                                                <td className="p-4 text-sm text-slate-300 font-medium">{row.subject}</td>
+                                                <td className="p-4 text-sm text-slate-300">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-[10px] font-bold text-white">
+                                                            {row.clientName.substring(0, 2).toUpperCase()}
+                                                        </div>
+                                                        {row.clientName}
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-sm">
+                                                    <Badge variant={
+                                                        row.status === 'RESOLVIDO' ? 'success' :
+                                                        row.status === 'NOVO' ? 'warning' :
+                                                        'info'
+                                                    }>
+                                                        {row.status}
+                                                    </Badge>
+                                                </td>
+                                                <td className="p-4 text-sm">
+                                                    <Badge variant={
+                                                        row.priority === 'URGENTE' ? 'destructive' :
+                                                        row.priority === 'ALTA' ? 'warning' :
+                                                        'info'
+                                                    }>
+                                                        {row.priority}
+                                                    </Badge>
+                                                </td>
+                                                <td className="p-4 text-sm text-slate-400">
+                                                    {new Date(row.createdAt).toLocaleDateString('pt-BR')}
+                                                </td>
+                                                <td className="p-4 text-sm text-right">
+                                                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        Detalhes
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </main>
         </div>

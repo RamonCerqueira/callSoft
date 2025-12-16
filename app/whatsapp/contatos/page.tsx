@@ -16,7 +16,7 @@ export default function WhatsAppContatosPage() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await api.get("/whatsapp/qr");
+        const r = await api.get("/api/v1/whatsapp/qr");
         const t = r.data?.qr ?? r.data?.qrCode ?? r.data;
         if (typeof t === "string" && t.length > 0) {
           setQrText(t);
@@ -30,7 +30,7 @@ export default function WhatsAppContatosPage() {
   const { data, isLoading } = useQuery<{ tickets: Ticket[] }>({
     queryKey: ["whatsapp-contatos"],
     queryFn: async () => {
-      const res = await api.get("/tickets");
+      const res = await api.get("/api/v1/tickets");
       return { tickets: res.data as Ticket[] };
     }
   });

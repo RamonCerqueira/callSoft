@@ -8,6 +8,11 @@ const cardVariants = cva("rounded-lg transition-all duration-200", {
             glass: "glass p-6 shadow-xl",
             solid: "bg-slate-dark border border-slate-700 p-6 shadow-lg",
             gradient: "gradient-primary p-6 shadow-xl text-white",
+            "glass-blue": "glass-card-blue p-6",
+            "glass-purple": "glass-card-purple p-6",
+            "glass-cyan": "glass-card-cyan p-6",
+            "glass-pink": "glass-card-pink p-6",
+            "glass-orange": "glass-card-orange p-6",
         },
         hoverable: {
             true: "cursor-pointer hover:scale-[1.02] hover:shadow-2xl",

@@ -1,6 +1,6 @@
 "use client";
 import { LucideIcon } from "lucide-react";
-import { Card, CardContent } from "../ui/Card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "../ui/Card";
 import { cn } from "../../lib/utils";
 
 interface StatCardProps {
@@ -11,44 +11,48 @@ interface StatCardProps {
         value: number;
         isPositive: boolean;
     };
-    variant?: "primary" | "secondary" | "accent";
+    variant?: "glass" | "glass-blue" | "glass-purple" | "glass-cyan" | "glass-pink" | "glass-orange";
 }
 
-const gradients = {
-    primary: "gradient-primary",
-    secondary: "gradient-secondary",
-    accent: "gradient-accent",
+const iconGradients = {
+    glass: "bg-white/10",
+    "glass-blue": "bg-blue-500/20 text-blue-400",
+    "glass-purple": "bg-purple-500/20 text-purple-400",
+    "glass-cyan": "bg-cyan-500/20 text-cyan-400",
+    "glass-pink": "bg-pink-500/20 text-pink-400",
+    "glass-orange": "bg-orange-500/20 text-orange-400",
 };
 
-export function StatCard({ title, value, icon: Icon, trend, variant = "primary" }: StatCardProps) {
+export function StatCard({ title, value, icon: Icon, trend, variant = "glass" }: StatCardProps) {
     return (
-        <Card variant="glass" hoverable className="overflow-hidden">
-            <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-400">{title}</p>
-                        <h3 className="mt-2 text-3xl font-bold text-white">{value}</h3>
-
-                        {trend && (
-                            <p className={cn(
-                                "mt-2 text-sm font-medium",
-                                trend.isPositive ? "text-green-400" : "text-red-400"
-                            )}>
-                                {trend.isPositive ? "+" : ""}{trend.value}%
-                                <span className="ml-1 text-slate-500">vs último mês</span>
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Icon with Gradient Background */}
-                    <div className={cn(
-                        "flex h-12 w-12 items-center justify-center rounded-lg",
-                        gradients[variant]
-                    )}>
-                        <Icon className="h-6 w-6 text-white" />
-                    </div>
+        <Card variant={variant} hoverable className="flex flex-col h-full overflow-hidden border-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-400">
+                    {title}
+                </CardTitle>
+                <div className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-xl backdrop-blur-md",
+                    iconGradients[variant]
+                )}>
+                    <Icon className="h-5 w-5" />
                 </div>
+            </CardHeader>
+            <CardContent>
+                <div className="text-4xl font-bold text-white mt-4">{value}</div>
             </CardContent>
+            {trend && (
+                <CardFooter className="pt-0 mt-auto">
+                    <div className="flex items-center gap-2">
+                         <span className={cn(
+                            "text-sm font-bold px-2 py-0.5 rounded-full",
+                            trend.isPositive ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"
+                        )}>
+                            {trend.isPositive ? "↑" : "↓"} {trend.value}%
+                        </span>
+                        <span className="text-xs text-slate-500">vs último mês</span>
+                    </div>
+                </CardFooter>
+            )}
         </Card>
     );
 }

@@ -14,6 +14,7 @@ const buttonVariants = cva(
         "ghost-glass": "glass-hover text-slate-300 hover:text-white",
         outline: "border border-slate-700 text-slate-300 hover:bg-white/5 hover:text-white",
         destructive: "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500",
+        link: "text-slate-300 hover:text-white",
       },
       size: {
         default: "h-10 px-6 py-2",

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState } from "react";
+import { cn } from "../../lib/utils";
 
 // ======================================================
 // CONTEXTO
@@ -20,15 +21,17 @@ const TabsContext = createContext<TabsContextType | null>(null);
 export function Tabs({
   defaultValue,
   children,
+  className,
 }: {
   defaultValue: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   const [value, setValue] = useState(defaultValue);
 
   return (
     <TabsContext.Provider value={{ value, setValue }}>
-      <div className="space-y-4">{children}</div>
+      <div className={cn("space-y-4", className)}>{children}</div>
     </TabsContext.Provider>
   );
 }
@@ -37,9 +40,9 @@ export function Tabs({
 // LISTA DE ABAS
 // ======================================================
 
-export function TabsList({ children }: { children: React.ReactNode }) {
+export function TabsList({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="flex gap-2 border-b border-white/10 pb-2">
+    <div className={cn("flex gap-2 border-b border-white/10 pb-2", className)}>
       {children}
     </div>
   );
@@ -52,9 +55,11 @@ export function TabsList({ children }: { children: React.ReactNode }) {
 export function TabsTrigger({
   value,
   children,
+  className,
 }: {
   value: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   const ctx = useContext(TabsContext);
   if (!ctx) return null;
@@ -64,12 +69,11 @@ export function TabsTrigger({
   return (
     <button
       onClick={() => ctx.setValue(value)}
-      className={`px-4 py-2 rounded-md text-sm transition
-        ${
-          active
-            ? "bg-white/10 text-white"
-            : "text-white/60 hover:text-white"
-        }`}
+      className={cn(
+        "px-4 py-2 rounded-md text-sm transition",
+        active ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+        className
+      )}
     >
       {children}
     </button>
@@ -83,12 +87,14 @@ export function TabsTrigger({
 export function TabsContent({
   value,
   children,
+  className,
 }: {
   value: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   const ctx = useContext(TabsContext);
   if (!ctx || ctx.value !== value) return null;
 
-  return <div>{children}</div>;
+  return <div className={className}>{children}</div>;
 }
