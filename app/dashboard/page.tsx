@@ -111,7 +111,13 @@ export default function DashboardPage() {
                         <OpenTicketsKpi count={chamadosEmAberto} />
                         {stats.map((stat, index) => (
                             <div key={stat.title} className="h-full" style={{ animationDelay: `${(index + 1) * 100}ms` }}>
-                                <StatCard {...stat} />
+                                <StatCard
+                                    title={stat.title}
+                                    value={stat.value}
+                                    icon={stat.icon}
+                                    trend={stat.trend}
+                                    variant={stat.variant}
+                                />  
                             </div>
                         ))}
                     </div>
