@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "../../src/components/u
 import { TrendingUp, Users, Clock, MessageCircle, Calendar, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, TicketMetrics } from "../../src/lib/api";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell } from "recharts";
 
 export default function ReportsPage() {
     const { data: metrics, isLoading } = useQuery<TicketMetrics>({
@@ -97,7 +97,17 @@ export default function ReportsPage() {
                                 key={kpi.title}
                                 style={{ animationDelay: `${index * 100}ms` }}
                             >
-                                <StatCard {...kpi} />
+                                <StatCard
+                                    title={kpi.title}
+                                    value={kpi.value}
+                                    icon={kpi.icon}
+                                    trend={kpi.trend}
+                                    variant={
+                                        kpi.variant === "primary" ? "glass-blue"
+                                            : kpi.variant === "secondary" ? "glass-purple"
+                                                : "glass-cyan"
+                                    }
+                                />
                             </div>
                         ))}
                     </div>
@@ -156,7 +166,7 @@ export default function ReportsPage() {
                                                 />
                                                 <Bar dataKey="value" name="Tickets" radius={[0, 4, 4, 0]}>
                                                     {statusDistribution.map((entry, index) => (
-                                                        <cell key={`cell-${index}`} fill={entry.color} />
+                                                        <Cell key={`cell-${index}`} fill={entry.color} />
                                                     ))}
                                                 </Bar>
                                             </BarChart>
