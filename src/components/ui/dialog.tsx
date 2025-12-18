@@ -44,9 +44,11 @@ export function Dialog({
 // CONTEÚDO DO MODAL
 // ======================================================
 
-export function DialogContent({ children }: { children: React.ReactNode }) {
+import { cn } from "../../lib/utils";
+
+export function DialogContent({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="bg-navy-deep rounded-xl shadow-xl p-6 w-full max-w-md">
+    <div className={cn("bg-navy-deep rounded-xl shadow-xl p-6 w-full max-w-md", className)}>
       {children}
     </div>
   );

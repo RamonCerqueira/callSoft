@@ -6,10 +6,14 @@ import { useNotificationStore } from "../../store/notificationStore";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { ToastContainer } from "../ui/ToastContainer";
 import { useState } from "react";
+import { UserDropdown } from "./UserDropdown";
 
 export function Header() {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const { unreadCount } = useNotificationStore();
+
+   const [isDropdownOpenUser, setIsDropdownOpenUser] = useState(false);
+    
 
     return (
         <header className="fixed left-64 right-0 top-0 z-30 h-16 glass border-b border-white/10">
@@ -45,9 +49,20 @@ export function Header() {
                     />
 
                     {/* User Menu */}
-                    <Button variant="ghost-glass" size="icon">
-                        <User className="h-5 w-5" />
-                    </Button>
+                    <div className="relative">
+                        <Button 
+                            variant="ghost-glass" 
+                            size="icon"
+                            onClick={() => setIsDropdownOpenUser(!isDropdownOpenUser)}
+                        >
+                            <User className="h-5 w-5" />
+                        </Button>
+                        
+                        <UserDropdown 
+                            isOpen={isDropdownOpenUser} 
+                            onClose={() => setIsDropdownOpenUser(false)} 
+                        />
+                    </div>
                 </div>
             </div>
             <ToastContainer />

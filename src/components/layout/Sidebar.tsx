@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
     Home,
     Ticket,
@@ -18,7 +18,6 @@ import { cn } from "../../lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { clearAuthToken } from "../../lib/auth";
-import router from "next/router";
 
 interface NavItem {
     name: string;
@@ -29,13 +28,13 @@ interface NavItem {
 const navItems: NavItem[] = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Tickets", href: "/tickets", icon: Ticket },
-    { name: "Fornecedores", href: "/suppliers", icon: Truck },
-    { name: "Contatos WhatsApp", href: "/whatsapp/contatos", icon: ListChecks },
+    { name: "Empresa", href: "/suppliers", icon: Truck },
+    // { name: "Contatos WhatsApp", href: "/whatsapp/contatos", icon: ListChecks },
     { name: "Config Chatbot", href: "/whatsapp/config", icon: Settings },
     { name: "Relatórios", href: "/reports", icon: BarChart3 },
     { name: "Configurações", href: "/settings", icon: Settings },
-    { name: "Criar Empresa", href: "/settings/criar-empresa", icon: Building2 },
-    { name: "Criar Usuario", href: "/settings/criar-usuario", icon: User2Icon },
+    // { name: "Criar Empresa", href: "/settings/criar-empresa", icon: Building2 },
+    { name: "Usuario", href: "/settings/criar-usuario", icon: User2Icon },
 ];
 
 export function Sidebar() {
@@ -48,7 +47,7 @@ export function Sidebar() {
             console.error("Logout failed", error);
         } finally {
             clearAuthToken();
-            router.push("/login");
+            useRouter().push("/app/login");
         }
     };
 
@@ -92,24 +91,32 @@ export function Sidebar() {
                 })}
             </nav>
 
-            {/* Bottom Section */}
+            {/* Bottom Section - User Profile */}
             <div className="absolute bottom-4 left-4 right-4">
-                <div className="glass-hover rounded-lg p-3 flex items-center justify-between group">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
-                            U
+                <div className="bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-xl p-3 shadow-lg group hover:bg-slate-800/60 transition-all duration-300">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/20">
+                            {userProfile?.name?.charAt(0).toUpperCase() || "U"}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">Usuário</p>
-                            <p className="text-xs text-slate-400 truncate">user@callsoft.com</p>
+                            <p className="text-sm font-semibold text-white truncate">
+                            {userProfile?.name || "Usuário"}
+                            </p>
+                            <div className="flex items-center gap-1.5">
+                                <span className={`h-1.5 w-1.5 rounded-full ${userProfile?.isActive ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'bg-slate-500'}`} />
+                                <p className="text-xs text-slate-400 truncate">
+                                    {userProfile?.role === 'admin' ? 'Administrador' : (userProfile?.role || 'Online')}
+                                </p>
+                            </div>
                         </div>
                     </div>
+                    
                     <button 
                         onClick={handleLogout}
-                        className="p-2 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                        title="Sair"
+                        className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-white/5 hover:bg-red-500/10 hover:text-red-400 text-slate-400 text-xs font-medium transition-all group-hover:translate-y-0 opacity-80 hover:opacity-100"
                     >
-                        <LogOut className="h-5 w-5" />
+                        <LogOut className="h-3.5 w-3.5" />
+                        <span>Sair do Sistema</span>
                     </button>
                 </div>
             </div>
