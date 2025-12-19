@@ -1,400 +1,215 @@
 "use client";
-import { Sidebar } from "../../src/components/layout/Sidebar";
-import { Header } from "../../src/components/layout/Header";
-import { Badge } from "../../src/components/ui/Badge";
-import { Button } from "../../src/components/ui/button";
-import { Input } from "../../src/components/ui/Input";
-import { Search, Filter, Download, MessageCircle, Eye } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { api, Ticket, TicketListResponse } from "../../src/lib/api";
+
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { getUserFromToken } from "../../src/lib/auth";
+import { useQuery } from "@tanstack/react-query";
+import { api, type Ticket, type TicketListResponse, type TicketStatus } from "@/lib/api";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/Input";
+import { Filter, Search, Eye, MessageCircle } from "lucide-react";
+import { useNotificationStore } from "@/store/notificationStore";
+
+const STATUS_OPTIONS: Array<{ value: TicketStatus | ""; label: string }> = [
+  { value: "", label: "Todos" },
+  { value: "SOLICITADO", label: "Solicitado" },
+  { value: "PENDENTE_ATENDIMENTO", label: "Pendente" },
+  { value: "EM_ATENDIMENTO", label: "Em atendimento" },
+  { value: "CONCLUIDO", label: "Concluído" },
+  { value: "CANCELADO", label: "Cancelado" },
+];
+
+function statusBadgeVariant(status: TicketStatus) {
+  switch (status) {
+    case "CONCLUIDO":
+      return "success" as const;
+    case "CANCELADO":
+      return "destructive" as const;
+    case "SOLICITADO":
+      return "warning" as const;
+    default:
+      return "info" as const;
+  }
+}
 
 export default function TicketsPage() {
-    const router = useRouter();
-    const user = getUserFromToken();
-    const [statusFilter, setStatusFilter] = useState<string>("");
-    const [dateFrom, setDateFrom] = useState<string>("");
-    const [dateTo, setDateTo] = useState<string>("");
-    const [priorityFilter, setPriorityFilter] = useState<string>("");
-    const [searchText, setSearchText] = useState<string>("");
-    
-    // Create Ticket States
-    const [showNew, setShowNew] = useState<boolean>(false);
-    const [newLoading, setNewLoading] = useState<boolean>(false);
-    const [newClientName, setNewClientName] = useState("");
-    const [newClientEmail, setNewClientEmail] = useState("");
-    const [newClientPhone, setNewClientPhone] = useState("");
-    const [newSubject, setNewSubject] = useState("");
-    const [newDescription, setNewDescription] = useState("");
-    const [newPriority, setNewPriority] = useState<string>("MEDIA");
+  const router = useRouter();
+  const { addNotification } = useNotificationStore();
 
-    const { data, isLoading, refetch } = useQuery<TicketListResponse>({
-        queryKey: ["tickets", statusFilter, dateFrom, dateTo, priorityFilter],
-        queryFn: async () => {
-            const res = await api.get("/api/v1/tickets", {
-                params: {
-                    status: statusFilter || undefined,
-                    dateFrom: dateFrom || undefined,
-                    dateTo: dateTo || undefined,
-                    priority: priorityFilter || undefined
-                },
-            });
-            return res.data;
-        },
-    });
+  const [status, setStatus] = useState<TicketStatus | "">("");
+  const [text, setText] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
-    const getStatusBadge = (status: string) => {
-        const variants = {
-            RESOLVIDO: "success",
-            FECHADO: "success",
-            NOVO: "warning",
-            ABERTO: "warning",
-            EM_ANDAMENTO: "info",
-            AGUARDANDO_CLIENTE: "warning",
-            AGUARDANDO_FORNECEDOR: "warning",
-            CANCELADO: "destructive",
-        } as const;
-
-        return variants[status as keyof typeof variants] || "default";
+  const params = useMemo(() => {
+    return {
+      status: status || undefined,
+      text: text || undefined,
+      from: from || undefined,
+      to: to || undefined,
+      page: 1,
+      pageSize: 20,
     };
+  }, [status, text, from, to]);
 
-    const handleCreateTicket = async () => {
-        setNewLoading(true);
-        try {
-            await api.post("/api/v1/tickets", {
-                clientName: newClientName,
-                clientEmail: newClientEmail,
-                clientPhone: newClientPhone,
-                subject: newSubject,
-                description: newDescription,
-                priority: newPriority,
-                category: "SUPORTE" // Default category
-            });
-            setShowNew(false);
-            // Reset form
-            setNewClientName("");
-            setNewClientEmail("");
-            setNewClientPhone("");
-            setNewSubject("");
-            setNewDescription("");
-            setNewPriority("MEDIA");
-            
-            await refetch();
-        } catch (error) {
-            console.error("Error creating ticket:", error);
-        } finally {
-            setNewLoading(false);
-        }
-    };
+  const { data, isLoading, refetch } = useQuery<TicketListResponse>({
+    queryKey: ["tickets", params],
+    queryFn: async () => {
+      const res = await api.get("/api/v1/tickets", { params });
+      return res.data;
+    },
+  });
 
-    const tickets = data?.data?.items || [];
+  const tickets: Ticket[] = data?.data.items ?? [];
 
-    return (
-        <div className="min-h-screen">
-            <Sidebar />
-            <Header />
+  const handleWhatsApp = (phone: string) => {
+    const digits = phone.replace(/\D/g, "");
+    if (!digits) return;
+    window.open(`https://wa.me/${digits}`, "_blank");
+  };
 
-            <main className="ml-64 pt-16">
-                <div className="p-8">
-                    {/* Page Header */}
-                    <div className="mb-8 flex items-center justify-between animate-slide-up">
-                        <div>
-                            <h1 className="text-3xl font-bold text-white">Tickets</h1>
-                            <p className="mt-2 text-slate-400">
-                                Gerencie todos os pedidos e tickets do sistema
-                            </p>
-                        </div>
-                        <Button variant="gradient" onClick={() => setShowNew(true)}>
-                            + Novo Ticket
-                        </Button>
-                    </div>
+  return (
+    <div className="min-h-screen">
+      <Sidebar />
+      <Header />
 
-                    {/* Filters */}
-                    <div className="glass rounded-lg p-4 mb-6 animate-slide-up">
-                        <div className="flex flex-col gap-4">
-                            {/* Search Bar - Full Width */}
-                            <div className="w-full">
-                                <Input
-                                    type="search"
-                                    placeholder="Buscar por assunto, cliente..."
-                                    value={searchText}
-                                    onChange={(e) => setSearchText(e.target.value)}
-                                    leftIcon={<Search className="h-4 w-4" />}
-                                    className="w-full"
-                                />
-                            </div>
+      <main className="ml-64 pt-16">
+        <div className="p-8 space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-slide-up">
+            <div>
+              <h1 className="text-3xl font-bold text-white">Tickets</h1>
+              <p className="mt-2 text-slate-400">Gerencie solicitações recebidas via bot/portal.</p>
+            </div>
 
-                            {/* Filters Row */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="w-full rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500"
-                                >
-                                    <option value="">Status</option>
-                                    <option value="NOVO">Novo</option>
-                                    <option value="ABERTO">Aberto</option>
-                                    <option value="EM_ANDAMENTO">Em Andamento</option>
-                                    <option value="RESOLVIDO">Resolvido</option>
-                                    <option value="CANCELADO">Cancelado</option>
-                                </select>
-                                <select
-                                    value={priorityFilter}
-                                    onChange={(e) => setPriorityFilter(e.target.value)}
-                                    className="w-full rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500"
-                                >
-                                    <option value="">Prioridade</option>
-                                    <option value="BAIXA">Baixa</option>
-                                    <option value="MEDIA">Média</option>
-                                    <option value="ALTA">Alta</option>
-                                    <option value="URGENTE">Urgente</option>
-                                </select>
-                                <div className="md:col-span-2 flex gap-2">
-                                    <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full" />
-                                    <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="mt-4 flex gap-3">
-                            <Button variant="outline" onClick={() => refetch()}>
-                                <Filter className="h-4 w-4 mr-2" />
-                                Aplicar
-                            </Button>
-                            <Button variant="outline">
-                                <Download className="h-4 w-4 mr-2" />
-                                Exportar
-                            </Button>
-                        </div>
-                    </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                void refetch();
+              }}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Atualizar
+            </Button>
+          </div>
 
-                    {/* Table */}
-                    <div className="glass rounded-lg overflow-hidden animate-slide-up">
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="border-b border-white/10">
-                                    <tr>
-                                        <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            Ticket ID
-                                        </th>
-                                        <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            Assunto
-                                        </th>
-                                        <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            Cliente
-                                        </th>
-                                        <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            Status
-                                        </th>
-                                        <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            Prioridade
-                                        </th>
-                                        <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            Criado em
-                                        </th>
-                                        <th className="text-left p-4 text-sm font-semibold text-slate-300">
-                                            Ações
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {isLoading ? (
-                                        <tr>
-                                            <td colSpan={7} className="p-8 text-center text-slate-400">
-                                                Carregando tickets...
-                                            </td>
-                                        </tr>
-                                    ) : tickets.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} className="p-8 text-center text-slate-400">
-                                                Nenhum ticket encontrado
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        tickets
-                                            .filter((ticket) => {
-                                                if (!searchText) return true;
-                                                const searchLower = searchText.toLowerCase();
-                                                return (
-                                                    ticket.subject.toLowerCase().includes(searchLower) ||
-                                                    ticket.clientName.toLowerCase().includes(searchLower) ||
-                                                    ticket.numero.toString().includes(searchLower)
-                                                );
-                                            })
-                                            .map((ticket) => (
-                                            <tr
-                                                key={ticket.id}
-                                                className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
-                                                onClick={() => router.push(`/tickets/${ticket.id}`)}
-                                            >
-                                                <td className="p-4 text-sm text-white font-medium">
-                                                    #{ticket.numero}
-                                                </td>
-                                                <td className="p-4 text-sm text-slate-300">
-                                                    {ticket.subject}
-                                                </td>
-                                                <td className="p-4 text-sm text-slate-300">
-                                                    <div>
-                                                        <p className="text-white">{ticket.clientName}</p>
-                                                        <p className="text-xs text-slate-500">{ticket.clientEmail}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4">
-                                                    <Badge variant={getStatusBadge(ticket.status)}>
-                                                        {ticket.status.replace(/_/g, " ")}
-                                                    </Badge>
-                                                </td>
-                                                <td className="p-4">
-                                                    <Badge variant={
-                                                        ticket.priority === 'URGENTE' ? 'destructive' :
-                                                        ticket.priority === 'ALTA' ? 'warning' :
-                                                        ticket.priority === 'MEDIA' ? 'info' : 'default'
-                                                    }>
-                                                        {ticket.priority}
-                                                    </Badge>
-                                                </td>
-                                                <td className="px-4 text-sm text-slate-300">
-                                                    {new Date(ticket.createdAt).toLocaleDateString("pt-BR")}
-                                                </td>
-                                                <td className="p-4 flex gap-2">
-                                                    <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white">
-                                                        <Eye className="h-4 w-4" />
-                                                    </button>
-                                                    {ticket.clientPhone && (
-                                                        <button className="p-2 hover:bg-whatsapp/20 rounded-lg transition-colors text-whatsapp">
-                                                            <MessageCircle className="h-4 w-4" />
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+          <div className="glass rounded-xl p-5 space-y-4 animate-slide-up">
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="md:col-span-2">
+                <Input
+                  type="search"
+                  placeholder="Buscar por empresa, responsável ou texto..."
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  leftIcon={<Search className="h-4 w-4" />}
+                />
+              </div>
 
-                        {/* Pagination - Simple Implementation based on API response */}
-                        {data?.data && (
-                            <div className="flex items-center justify-between p-4 border-t border-white/10">
-                                <p className="text-sm text-slate-400">
-                                    Página {data.data.page} de {data.data.pages} (Total: {data.data.total})
-                                </p>
-                                <div className="flex gap-2">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        disabled={data.data.page <= 1}
-                                        onClick={() => {
-                                            // Implement pagination logic if needed, e.g. state for page
-                                        }}
-                                    >
-                                        Anterior
-                                    </Button>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        disabled={data.data.page >= data.data.pages}
-                                        onClick={() => {
-                                            // Implement pagination logic
-                                        }}
-                                    >
-                                        Próxima
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </main>
-            
-            {showNew && (
-                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-                    <div className="glass rounded-xl w-full max-w-lg p-6 animate-scale-in">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-semibold text-white">Novo Ticket</h3>
-                            <button onClick={() => setShowNew(false)} className="text-slate-400 hover:text-white">
-                                ✕
-                            </button>
-                        </div>
-                        
-                        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-1">Cliente *</label>
-                                <Input 
-                                    placeholder="Nome do cliente" 
-                                    value={newClientName} 
-                                    onChange={(e) => setNewClientName(e.target.value)} 
-                                />
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1">Email *</label>
-                                    <Input 
-                                        placeholder="email@cliente.com" 
-                                        value={newClientEmail} 
-                                        onChange={(e) => setNewClientEmail(e.target.value)} 
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1">Telefone</label>
-                                    <Input 
-                                        placeholder="+55 11 99999-9999" 
-                                        value={newClientPhone} 
-                                        onChange={(e) => setNewClientPhone(e.target.value)} 
-                                    />
-                                </div>
-                            </div>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as any)}
+                className="w-full rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500"
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.label} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-1">Assunto *</label>
-                                <Input 
-                                    placeholder="Resumo do problema" 
-                                    value={newSubject} 
-                                    onChange={(e) => setNewSubject(e.target.value)} 
-                                />
-                            </div>
+              <div className="flex gap-2">
+                <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full" />
+                <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-full" />
+              </div>
+            </div>
+          </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-1">Prioridade</label>
-                                <select 
-                                    className="w-full rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500"
-                                    value={newPriority}
-                                    onChange={(e) => setNewPriority(e.target.value)}
-                                >
-                                    <option value="BAIXA">Baixa</option>
-                                    <option value="MEDIA">Média</option>
-                                    <option value="ALTA">Alta</option>
-                                    <option value="URGENTE">Urgente</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-1">Descrição *</label>
-                                <textarea 
-                                    className="w-full rounded-lg bg-slate-dark border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500 min-h-[100px]"
-                                    placeholder="Detalhes completos da solicitação..."
-                                    value={newDescription}
-                                    onChange={(e) => setNewDescription(e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-white/10">
-                            <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
+          <div className="glass rounded-lg overflow-hidden animate-slide-up">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b border-white/10">
+                  <tr>
+                    <th className="text-left p-4 text-sm font-semibold text-slate-300">Pedido</th>
+                    <th className="text-left p-4 text-sm font-semibold text-slate-300">Empresa</th>
+                    <th className="text-left p-4 text-sm font-semibold text-slate-300">Responsável</th>
+                    <th className="text-left p-4 text-sm font-semibold text-slate-300">Status</th>
+                    <th className="text-left p-4 text-sm font-semibold text-slate-300">Prioridade</th>
+                    <th className="text-left p-4 text-sm font-semibold text-slate-300">Criado</th>
+                    <th className="text-left p-4 text-sm font-semibold text-slate-300">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-slate-400">
+                        Carregando tickets...
+                      </td>
+                    </tr>
+                  ) : tickets.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-slate-400">
+                        Nenhum ticket encontrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    tickets.map((ticket) => (
+                      <tr
+                        key={ticket.id}
+                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                      >
+                        <td className="p-4 text-sm text-white font-medium">#{ticket.pedido}</td>
+                        <td className="p-4 text-sm text-slate-300">{ticket.empresa ?? "--"}</td>
+                        <td className="p-4 text-sm text-slate-300">{ticket.responsavel ?? "--"}</td>
+                        <td className="p-4 text-sm">
+                          <Badge variant={statusBadgeVariant(ticket.status)}>
+                            {ticket.status.replace(/_/g, " ")}
+                          </Badge>
+                        </td>
+                        <td className="p-4 text-sm text-slate-300">{ticket.prioridade ?? "--"}</td>
+                        <td className="p-4 text-sm text-slate-400">
+                          {new Date(ticket.createdAt).toLocaleDateString("pt-BR")}
+                        </td>
+                        <td className="p-4 text-sm">
+                          <div className="flex items-center gap-2">
                             <Button
-                                variant="gradient"
-                                isLoading={newLoading}
-                                onClick={handleCreateTicket}
-                                disabled={!newClientName || !newClientEmail || !newSubject || !newDescription}
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => router.push(`/tickets/${ticket.id}`)}
+                              title="Detalhes"
                             >
-                                Criar Ticket
+                              <Eye className="h-4 w-4" />
                             </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (!ticket.contatoWpp) {
+                                  addNotification({
+                                    title: "Sem contato",
+                                    message: "Ticket não possui WhatsApp informado.",
+                                    type: "info",
+                                    category: "system",
+                                  });
+                                  return;
+                                }
+                                handleWhatsApp(ticket.contatoWpp);
+                              }}
+                              title="WhatsApp"
+                            >
+                              <MessageCircle className="h-4 w-4 text-green-400" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-    );
+      </main>
+    </div>
+  );
 }

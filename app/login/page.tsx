@@ -1,14 +1,16 @@
 "use client";
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { Input } from "../../src/components/ui/Input";
-import { Button } from "../../src/components/ui/button";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { api } from "../../src/lib/api";
-import { setAuthToken } from "../../src/lib/auth";
-import { useNotificationStore } from "../../src/store/notificationStore";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../src/components/ui/Card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../src/components/ui/dialog";
+import { api } from "@/lib/api";
+import { setAuthToken } from "@/lib/auth";
+import { useNotificationStore } from "@/store/notificationStore";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { NeonLinesBackground } from "@/components/ui/NeonLinesBackground";
+import { resolveTenantIdFromEmail } from "@/lib/tenant";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -27,10 +29,14 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
+            const tenantId = resolveTenantIdFromEmail(email);
+            if (!tenantId) {
+                throw new Error("Não foi possível identificar o tenant a partir do e-mail.");
+            }
             const res = await api.post("/api/v1/auth/login", {
                 email,
                 password,
-                tenantId: process.env.NEXT_PUBLIC_TENANT_ID
+                tenantId
             });
 
             const { success, data } = res.data;
@@ -66,9 +72,13 @@ export default function LoginPage() {
         e.preventDefault();
         setIsResetLoading(true);
         try {
+            const tenantId = resolveTenantIdFromEmail(resetEmail);
+            if (!tenantId) {
+                throw new Error("Não foi possível identificar o tenant a partir do e-mail.");
+            }
             await api.post("/api/v1/auth/password-reset/request", {
                 email: resetEmail,
-                tenantId: process.env.NEXT_PUBLIC_TENANT_ID
+                tenantId
             });
             addNotification({
                 title: "Email Enviado",
@@ -94,6 +104,7 @@ export default function LoginPage() {
         <div className="min-h-screen flex bg-slate-950 relative overflow-hidden">
             {/* Background Decor */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+                <NeonLinesBackground />
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: "1s" }} />
             </div>

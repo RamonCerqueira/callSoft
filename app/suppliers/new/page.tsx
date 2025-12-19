@@ -1,14 +1,14 @@
 "use client";
-import { Sidebar } from "../../../src/components/layout/Sidebar";
-import { Header } from "../../../src/components/layout/Header";
-import { Button } from "../../../src/components/ui/button";
-import { Input } from "../../../src/components/ui/Input";
-import { Card, CardHeader, CardTitle, CardContent } from "../../../src/components/ui/Card";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { ArrowLeft, Save, Building2, MapPin, Contact, Search } from "lucide-react";
-import { api, CreateFornecedorRequest } from "../../../src/lib/api";
+import { api, CreateFornecedorRequest } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useNotificationStore } from "../../../src/store/notificationStore";
+import { useNotificationStore } from "@/store/notificationStore";
 
 export default function NewSupplierPage() {
     const router = useRouter();
@@ -113,7 +113,7 @@ export default function NewSupplierPage() {
 
         setIsLoading(true);
         try {
-            await api.post("/api/v1/suppliers", formData);
+            await api.post("/api/v1/fornecedores", formData);
             addNotification({
                 title: "Sucesso",
                 message: "Fornecedor cadastrado com sucesso!",
@@ -146,7 +146,7 @@ export default function NewSupplierPage() {
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Voltar
                         </Button>
-                        <h1 className="text-3xl font-bold text-white">Novo Fornecedor</h1>
+                        <h1 className="text-3xl font-bold text-white">Nova Empresa</h1>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6 animate-slide-up" style={{ animationDelay: "100ms" }}>
@@ -356,7 +356,7 @@ export default function NewSupplierPage() {
                                 ) : (
                                     <>
                                         <Save className="h-4 w-4 mr-2" />
-                                        Salvar Fornecedor
+                                        Salvar Empresa
                                     </>
                                 )}
                             </Button>

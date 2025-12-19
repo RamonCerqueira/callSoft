@@ -1,15 +1,15 @@
 "use client";
-import { Sidebar } from "../../../../../src/components/layout/Sidebar";
-import { Header } from "../../../../../src/components/layout/Header";
-import { Button } from "../../../../../src/components/ui/button";
-import { Input } from "../../../../../src/components/ui/Input";
-import { Card, CardHeader, CardTitle, CardContent } from "../../../../../src/components/ui/Card";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { ArrowLeft, Save, Plus, Trash2, ShoppingCart, Calendar, DollarSign, Truck } from "lucide-react";
-import { api, CreateCotacaoRequest, ItemCotacao, FornecedorListResponse } from "../../../../../src/lib/api";
+import { api, CreateCotacaoRequest, ItemCotacao, FornecedorListResponse } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNotificationStore } from "../../../../../src/store/notificationStore";
+import { useNotificationStore } from "@/store/notificationStore";
 
 export default function NewQuotePage({ params }: { params: { id: string } }) {
     const router = useRouter();
@@ -20,7 +20,7 @@ export default function NewQuotePage({ params }: { params: { id: string } }) {
     const { data: suppliersData } = useQuery<FornecedorListResponse>({
         queryKey: ["suppliers-list"],
         queryFn: async () => {
-            const res = await api.get("/api/v1/suppliers", { params: { limit: 100, active: true } });
+            const res = await api.get("/api/v1/fornecedores", { params: { limit: 100, isActive: true } });
             return res.data;
         }
     });

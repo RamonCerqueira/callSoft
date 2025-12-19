@@ -1,14 +1,14 @@
 "use client";
-import { Sidebar } from "../../src/components/layout/Sidebar";
-import { Header } from "../../src/components/layout/Header";
-import { Button } from "../../src/components/ui/button";
-import { Input } from "../../src/components/ui/Input";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/Input";
 import { Search, Filter, Download, Plus, MapPin, Phone, Mail } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { api, FornecedorListResponse } from "../../src/lib/api";
+import { api, FornecedorListResponse } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Badge } from "../../src/components/ui/Badge";
+import { Badge } from "@/components/ui/Badge";
 
 export default function SuppliersPage() {
     const router = useRouter();
@@ -18,7 +18,7 @@ export default function SuppliersPage() {
     const { data, isLoading } = useQuery<FornecedorListResponse>({
         queryKey: ["suppliers", page, searchText],
         queryFn: async () => {
-            const res = await api.get("/api/v1/suppliers", {
+            const res = await api.get("/api/v1/fornecedores", {
                 params: {
                     page,
                     search: searchText || undefined,
@@ -48,7 +48,7 @@ export default function SuppliersPage() {
                         </div>
                         <Button variant="gradient" onClick={() => router.push("/suppliers/new")}>
                             <Plus className="h-4 w-4 mr-2" />
-                            Novo Fornecedor
+                            Nova Empresa
                         </Button>
                     </div>
 

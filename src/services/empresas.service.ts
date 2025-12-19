@@ -1,0 +1,45 @@
+import { api } from '@/lib/api';
+import type { ApiResponse } from '@/types/api.types';
+
+export interface CreateEmpresaRequest {
+  nomeFantasia: string;
+  razaoSocial: string;
+  cnpj?: string;
+  inscEstadual?: string;
+  im?: string;
+  cep?: string;
+  endereco?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  telefone?: string;
+  telefoneSec?: string;
+  cabecalho?: string;
+  observacao?: string;
+}
+
+export interface EmpresaResponse {
+  codEmp: number;
+  nomeFantasia: string;
+  razaoSocial: string;
+  cnpj?: string | null;
+  inscEstadual?: string | null;
+  im?: string | null;
+  cep?: string | null;
+  endereco?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  telefone?: string | null;
+  telefoneSec?: string | null;
+  cabecalho?: string | null;
+  observacao?: string | null;
+  ativo: boolean;
+}
+
+export const empresasApi = {
+  create: async (payload: CreateEmpresaRequest): Promise<EmpresaResponse> => {
+    const response = await api.post<ApiResponse<EmpresaResponse>>('/api/v1/empresas', payload);
+    return response.data.data!;
+  },
+};

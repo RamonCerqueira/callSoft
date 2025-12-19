@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { Input } from "../../src/components/ui/Input";
-import { Button } from "../../src/components/ui/button";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "../../src/lib/api";
-import { useNotificationStore } from "../../src/store/notificationStore";
+import { api } from "@/lib/api";
+import { useNotificationStore } from "@/store/notificationStore";
 import Link from "next/link";
 
 export default function PasswordResetPage() {

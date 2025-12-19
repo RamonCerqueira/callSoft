@@ -1,14 +1,14 @@
 "use client";
-import { Sidebar } from "../../../../src/components/layout/Sidebar";
-import { Header } from "../../../../src/components/layout/Header";
-import { Button } from "../../../../src/components/ui/button";
-import { Input } from "../../../../src/components/ui/Input";
-import { Card, CardHeader, CardTitle, CardContent } from "../../../../src/components/ui/Card";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { ArrowLeft, Save, Building2, MapPin, Contact, Search } from "lucide-react";
-import { api, UpdateFornecedorRequest, Fornecedor } from "../../../../src/lib/api";
+import { api, UpdateFornecedorRequest, Fornecedor } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { useNotificationStore } from "../../../../src/store/notificationStore";
+import { useNotificationStore } from "@/store/notificationStore";
 import { useQuery } from "@tanstack/react-query";
 
 export default function EditSupplierPage({ params }: { params: { id: string } }) {
@@ -40,7 +40,7 @@ export default function EditSupplierPage({ params }: { params: { id: string } })
     const { data: supplier, isLoading: isFetching } = useQuery<Fornecedor>({
         queryKey: ["supplier", id],
         queryFn: async () => {
-            const res = await api.get(`/api/v1/suppliers/${id}`);
+            const res = await api.get(`/api/v1/fornecedores/${id}`);
             return res.data;
         }
     });
@@ -82,7 +82,7 @@ export default function EditSupplierPage({ params }: { params: { id: string } })
         
         setIsLoading(true);
         try {
-            await api.put(`/api/v1/suppliers/${id}`, formData);
+            await api.put(`/api/v1/fornecedores/${id}`, formData);
             addNotification({
                 title: "Sucesso",
                 message: "Fornecedor atualizado com sucesso!",

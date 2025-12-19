@@ -1,14 +1,14 @@
 "use client";
-import { Sidebar } from "../../../src/components/layout/Sidebar";
-import { Header } from "../../../src/components/layout/Header";
-import { Card, CardHeader, CardTitle, CardContent } from "../../../src/components/ui/Card";
-import { Badge } from "../../../src/components/ui/Badge";
-import { Button } from "../../../src/components/ui/button";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { api, Fornecedor, FornecedorStats } from "../../../src/lib/api";
+import { api, Fornecedor, FornecedorStats } from "@/lib/api";
 import { ArrowLeft, MapPin, Phone, Mail, Building2, Clock, CheckCircle, XCircle, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { StatCard, StatCardProps } from "../../../src/components/ui/StatCard";
+import { StatCard, StatCardProps } from "@/components/ui/StatCard";
 
 export default function SupplierDetailPage({ params }: { params: { id: string } }) {
     const router = useRouter();
@@ -18,7 +18,7 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
     const { data: supplier, isLoading } = useQuery<Fornecedor>({
         queryKey: ["supplier", id],
         queryFn: async () => {
-            const res = await api.get(`/api/v1/suppliers/${id}`);
+            const res = await api.get(`/api/v1/fornecedores/${id}`);
             return res.data;
         }
     });
@@ -27,7 +27,7 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
     const { data: statsData } = useQuery<FornecedorStats>({
         queryKey: ["supplier-stats", id],
         queryFn: async () => {
-            const res = await api.get(`/api/v1/suppliers/${id}/stats`);
+            const res = await api.get(`/api/v1/fornecedores/${id}/stats`);
             return res.data;
         },
         enabled: !!supplier // Only fetch stats if supplier exists

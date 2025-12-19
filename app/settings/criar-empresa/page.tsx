@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "../../../src/lib/api";
+import { empresasApi } from "@/services/empresas.service";
 
-import { Sidebar } from "../../../src/components/layout/Sidebar";
-import { Header } from "../../../src/components/layout/Header";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
 
 import {
   Card,
@@ -13,10 +13,10 @@ import {
   CardTitle,
   CardContent,
   CardFooter
-} from "../../../src/components/ui/Card";
+} from "@/components/ui/Card";
 
-import { Input } from "../../../src/components/ui/Input";
-import { Button } from "../../../src/components/ui/button";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
 
 import { Building2, Search, Phone, MapPin } from "lucide-react";
 
@@ -90,7 +90,7 @@ export default function CriarEmpresaPage() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      return api.post("/empresas", {
+      return empresasApi.create({
         nomeFantasia,
         razaoSocial,
         cnpj: cnpj || null,

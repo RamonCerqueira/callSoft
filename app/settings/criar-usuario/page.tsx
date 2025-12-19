@@ -2,19 +2,19 @@
 
 import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { api } from "../../../src/lib/api";
+import { api } from "@/lib/api";
 import { User, Lock, Mail, Upload, X, Image as ImageIcon, Shield, Settings, Database } from "lucide-react";
 
-import { Sidebar } from "../../../src/components/layout/Sidebar";
-import { Header } from "../../../src/components/layout/Header";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
 
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "../../../src/components/ui/Card";
-import { Input } from "../../../src/components/ui/Input";
-import { Button } from "../../../src/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../../src/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../../src/components/ui/dialog";
-import { Badge } from "../../../src/components/ui/Badge";
-import { useNotificationStore } from "../../../src/store/notificationStore";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/Badge";
+import { useNotificationStore } from "@/store/notificationStore";
 
 export default function UsuariosPage() {
   const { addNotification } = useNotificationStore();
@@ -48,7 +48,7 @@ export default function UsuariosPage() {
   ========================== */
   const { data: usuarios = [], refetch } = useQuery({
     queryKey: ["usuarios"],
-    queryFn: async () => (await api.get("/usuarios")).data,
+    queryFn: async () => (await api.get("/api/v1/usuarios")).data.data,
   });
 
   /* =========================
@@ -117,26 +117,26 @@ export default function UsuariosPage() {
   ========================== */
   const createMutation = useMutation({
     mutationFn: async () => {
-      // Nota: A API espera email, password, tenantId, roleIds.
-      // O upload de foto pode ser feito antes ou separado, mas o endpoint de registro retorna o usuário criado.
-      // Se a API suportar atualização de perfil, podemos enviar a foto depois.
-      // Por enquanto, seguimos o schema estrito para criação.
-      
       const payload = {
-        email: email.toLowerCase(),
-        password: senha,
-        tenantId: process.env.NEXT_PUBLIC_TENANT_ID,
-        roleIds: [] // Opcional, lista de IDs de roles
+        login,
+        senha,
+        email: email ? email.toLowerCase() : null,
+        op8,
+        op91,
+        op28,
+        op34,
+        op52,
+        estoqueLocal,
       };
 
-      const res = await api.post("/api/v1/auth/register", payload);
+      const res = await api.post("/api/v1/usuarios", payload);
       
       // Se houver foto, fazer upload e associar (se a API permitir update logo em seguida)
-      if (foto && res.data.success && res.data.data.user.id) {
+      if (foto && res.data.success && res.data.data.codUsu) {
           try {
              const caminhoFoto = await uploadFoto(foto);
              // Aqui precisaria de um endpoint para atualizar o usuário com a foto
-             // await api.put(`/usuarios/${res.data.data.user.id}`, { caminhoFoto });
+             await api.put(`/api/v1/usuarios/${res.data.data.codUsu}`, { caminhoFoto });
           } catch (e) {
              console.error("Erro ao fazer upload da foto após registro", e);
           }
@@ -187,9 +187,11 @@ export default function UsuariosPage() {
         caminhoFoto = await uploadFoto(novaFoto);
       }
 
-      return api.put(`/usuarios/${usuarioEdit.codUsu}`, {
-        ...usuarioEdit,
-        CaminhoFoto: caminhoFoto,
+      return api.put(`/api/v1/usuarios/${usuarioEdit.codUsu}`, {
+        login: usuarioEdit.login,
+        senha: usuarioEdit.senha || undefined,
+        email: usuarioEdit.email || null,
+        caminhoFoto,
       });
     },
     onSuccess: () => {
@@ -217,7 +219,7 @@ export default function UsuariosPage() {
      INATIVAR
   ========================== */
   async function inativarUsuario(id: number) {
-    await api.patch(`/usuarios/${id}/inativar`);
+    await api.patch(`/api/v1/usuarios/${id}/inativar`);
     refetch();
   }
 

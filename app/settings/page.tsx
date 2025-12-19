@@ -1,12 +1,13 @@
 "use client";
 
-import { Sidebar } from "../../src/components/layout/Sidebar";
-import { Header } from "../../src/components/layout/Header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../src/components/ui/Card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../src/components/ui/tabs";
-import { Switch } from "../../src/components/ui/Switch";
-import { useNotificationStore, NotificationCategory } from "../../src/store/notificationStore";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/Switch";
+import { useNotificationStore, NotificationCategory } from "@/store/notificationStore";
 import { Bell, Shield, Users, Server, DollarSign, MessageSquare } from "lucide-react";
+import WhatsAppContatosPage from "../whatsapp/contatos/page";
 
 export default function SettingsPage() {
   const { preferences, togglePreference } = useNotificationStore();
@@ -75,6 +76,12 @@ export default function SettingsPage() {
             >
               Segurança
             </TabsTrigger>
+            <TabsTrigger 
+              value="whatsapp"
+              className="px-6 py-2 data-[state=active]:bg-slate-700 data-[state=active]:text-slate-100"
+            >
+              WhatsApp
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="notifications">
@@ -105,7 +112,7 @@ export default function SettingsPage() {
                         </div>
                         <Switch 
                           checked={preferences[setting.id as NotificationCategory]}
-                          onCheckedChange={() => togglePreference(setting.id as NotificationCategory)}
+                          onCheckedChange={() => void togglePreference(setting.id as NotificationCategory)}
                         />
                       </div>
                     );
@@ -127,6 +134,13 @@ export default function SettingsPage() {
             <Card className="border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
               <CardContent className="p-8 text-center text-slate-400">
                 <p>Configurações de segurança em desenvolvimento.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="whatsapp">
+            <Card className="border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
+              <CardContent className="p-8 text-center text-slate-400">
+               <WhatsAppContatosPage />
               </CardContent>
             </Card>
           </TabsContent>

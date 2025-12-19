@@ -1,81 +1,87 @@
 "use client";
-import { Sidebar } from "../../src/components/layout/Sidebar";
-import { Header } from "../../src/components/layout/Header";
-import { StatCard } from "../../src/components/ui/StatCard";
-import { StatusPieChart } from "../../src/components/charts/StatusPieChart";
-import { OpenTicketsKpi } from "../../src/components/ui/KpiCard";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { StatCard } from "@/components/ui/StatCard";
+import { StatusPieChart } from "@/components/charts/StatusPieChart";
+import { OpenTicketsKpi } from "@/components/ui/KpiCard";
 import { Ticket as TicketIcon, MessageCircle, CheckCircle, Clock } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "../../src/components/ui/Card";
-import { Button } from "../../src/components/ui/button";
-import { Badge } from "../../src/components/ui/Badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/Badge";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useQuery } from "@tanstack/react-query";
-import { api, TicketMetrics, TicketListResponse } from "../../src/lib/api";
+import { api, TicketMetrics, TicketListResponse } from "@/lib/api";
 
 export default function DashboardPage() {
     const { data: metrics, isLoading: isLoadingMetrics } = useQuery<TicketMetrics>({
         queryKey: ["dashboard-metrics"],
         queryFn: async () => {
-            const res = await api.get("/api/v1/dashboard/metrics");
-            return res.data;
+            const res = await api.get("/api/v1/metrics/tickets");
+            return res.data.data;
         }
     });
 
-    const { data: recentTicketsData, isLoading: isLoadingTickets } = useQuery<TicketListResponse>({
+    const { data: recentTicketsData, isLoading: isLoadingTickets } = useQuery<TicketListResponse["data"]>({
         queryKey: ["recent-tickets"],
         queryFn: async () => {
-            const res = await api.get("/api/v1/tickets", { params: { page: 1, limit: 5 } });
-            return res.data;
+            const res = await api.get("/api/v1/tickets", { params: { page: 1, pageSize: 5 } });
+            return res.data.data;
         }
     });
+
+    const statusCounts = metrics?.statusCounts;
+    const totalTickets = statusCounts ? Object.values(statusCounts).reduce((acc, value) => acc + value, 0) : 0;
+    const novosTickets = statusCounts?.SOLICITADO ?? 0;
+    const resolvidosTickets = statusCounts?.CONCLUIDO ?? 0;
+    const emAbertoTickets = (statusCounts?.PENDENTE_ATENDIMENTO ?? 0) + (statusCounts?.EM_ATENDIMENTO ?? 0);
 
     const stats = [
         {
             title: "Total de Tickets",
-            value: metrics?.totais.total.toString() || "0",
+            value: totalTickets.toString(),
             icon: TicketIcon,
             trend: { value: 0, isPositive: true },
             variant: "glass-blue" as const,
         },
         {
             title: "Novos Tickets",
-            value: metrics?.totais.novos.toString() || "0",
+            value: novosTickets.toString(),
             icon: MessageCircle,
             trend: { value: 0, isPositive: true },
             variant: "glass-cyan" as const,
         },
         {
             title: "Tickets Resolvidos",
-            value: metrics?.totais.resolvidos.toString() || "0",
+            value: resolvidosTickets.toString(),
             icon: CheckCircle,
-            trend: { value: metrics?.taxas.taxaResolucao || 0, isPositive: true },
+            trend: { value: 0, isPositive: true },
             variant: "glass-purple" as const,
         },
         {
             title: "Tempo Médio (min)",
-            value: metrics?.tempos.tempoMedioResolucao ? Math.round(metrics.tempos.tempoMedioResolucao / 60).toString() : "0",
+            value: metrics?.averageTimeToFirstAttendanceMinutes != null ? Math.round(metrics.averageTimeToFirstAttendanceMinutes).toString() : "--",
             icon: Clock,
             trend: { value: 0, isPositive: false },
             variant: "glass-pink" as const,
         },
     ];
 
-    const chamadosEmAberto = metrics ? (metrics.totais.abertos + metrics.totais.emAndamento) : 0;
+    const chamadosEmAberto = emAbertoTickets;
 
-    const lineData = metrics?.distribuicao.porDia.map(d => ({
-        name: new Date(d.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-        value: d.total
+    const lineData = metrics?.volumeByDate.map(d => ({
+        name: new Date(d.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+        value: d.total,
     })) || [];
 
     const pieData = metrics ? [
-        { name: "Novos", value: metrics.totais.novos, color: "#f59e0b" },
-        { name: "Abertos", value: metrics.totais.abertos, color: "#3b82f6" },
-        { name: "Em Andamento", value: metrics.totais.emAndamento, color: "#8b5cf6" },
-        { name: "Resolvidos", value: metrics.totais.resolvidos, color: "#22c55e" },
-        { name: "Cancelados", value: metrics.totais.cancelados, color: "#ef4444" }
+        { name: "Solicitado", value: metrics.statusCounts.SOLICITADO, color: "#f59e0b" },
+        { name: "Pendente", value: metrics.statusCounts.PENDENTE_ATENDIMENTO, color: "#3b82f6" },
+        { name: "Em Atendimento", value: metrics.statusCounts.EM_ATENDIMENTO, color: "#8b5cf6" },
+        { name: "Concluído", value: metrics.statusCounts.CONCLUIDO, color: "#22c55e" },
+        { name: "Cancelado", value: metrics.statusCounts.CANCELADO, color: "#ef4444" },
     ] : [];
 
-    const recentTickets = recentTicketsData?.data.items || [];
+    const recentTickets = recentTicketsData?.items || [];
 
     return (
         <div className="min-h-screen">
@@ -220,8 +226,8 @@ export default function DashboardPage() {
                                     <thead>
                                         <tr className="border-b border-white/5 text-left">
                                             <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ticket ID</th>
-                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Assunto</th>
-                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Solicitante</th>
+                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Empresa</th>
+                                            <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Contato</th>
                                             <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
                                             <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Prioridade</th>
                                             <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Criado</th>
@@ -245,33 +251,27 @@ export default function DashboardPage() {
                                         ) : (
                                             recentTickets.map((row) => (
                                             <tr key={row.id} className="hover:bg-white/5 transition-colors group">
-                                                <td className="p-4 text-sm text-white font-medium">#{row.numero}</td>
-                                                <td className="p-4 text-sm text-slate-300 font-medium">{row.subject}</td>
+                                                <td className="p-4 text-sm text-white font-medium">#{row.pedido}</td>
+                                                <td className="p-4 text-sm text-slate-300 font-medium">{row.empresa ?? "--"}</td>
                                                 <td className="p-4 text-sm text-slate-300">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-[10px] font-bold text-white">
-                                                            {row.clientName.substring(0, 2).toUpperCase()}
+                                                            {(row.contatoWpp ?? "W").substring(0, 2).toUpperCase()}
                                                         </div>
-                                                        {row.clientName}
+                                                        {row.contatoWpp}
                                                     </div>
                                                 </td>
                                                 <td className="p-4 text-sm">
                                                     <Badge variant={
-                                                        row.status === 'RESOLVIDO' ? 'success' :
-                                                        row.status === 'NOVO' ? 'warning' :
+                                                        row.status === 'CONCLUIDO' ? 'success' :
+                                                        row.status === 'SOLICITADO' ? 'warning' :
                                                         'info'
                                                     }>
-                                                        {row.status}
+                                                        {row.status.replace(/_/g, " ")}
                                                     </Badge>
                                                 </td>
                                                 <td className="p-4 text-sm">
-                                                    <Badge variant={
-                                                        row.priority === 'URGENTE' ? 'destructive' :
-                                                        row.priority === 'ALTA' ? 'warning' :
-                                                        'info'
-                                                    }>
-                                                        {row.priority}
-                                                    </Badge>
+                                                    <span className="text-slate-300 text-sm">{row.prioridade ?? "--"}</span>
                                                 </td>
                                                 <td className="p-4 text-sm text-slate-400">
                                                     {new Date(row.createdAt).toLocaleDateString('pt-BR')}
