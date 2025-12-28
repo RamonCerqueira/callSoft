@@ -57,7 +57,7 @@ export default function LoginPage() {
                     tenantId
                 });
             } catch (loginError: any) {
-                const errorCode = loginError?.response?.data?.code;
+                const errorCode = loginError?.response?.data?.error?.code;
                 if (isSoftline && errorCode === "AUTH_026") {
                     localStorage.setItem("firstLoginEmail", email);
                     setFirstLoginEmail(email);
