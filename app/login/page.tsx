@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NeonLinesBackground } from "@/components/ui/NeonLinesBackground";
 import { resolveTenantIdFromEmail } from "@/lib/tenant";
+import { authApi } from "@/services/auth.service";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -23,6 +24,20 @@ export default function LoginPage() {
     const [isResetOpen, setIsResetOpen] = useState(false);
     const [resetEmail, setResetEmail] = useState("");
     const [isResetLoading, setIsResetLoading] = useState(false);
+    const [isFirstLoginOpen, setIsFirstLoginOpen] = useState(false);
+    const [firstLoginEmail, setFirstLoginEmail] = useState("");
+    const [legacyLogin, setLegacyLogin] = useState("");
+    const [legacySenha, setLegacySenha] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [isFirstLoginLoading, setIsFirstLoginLoading] = useState(false);
+
+    useEffect(() => {
+        const storedEmail = localStorage.getItem("firstLoginEmail");
+        if (storedEmail) {
+            setFirstLoginEmail(storedEmail);
+        }
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,11 +48,24 @@ export default function LoginPage() {
             if (!tenantId) {
                 throw new Error("Não foi possível identificar o tenant a partir do e-mail.");
             }
-            const res = await api.post("/api/v1/auth/login", {
-                email,
-                password,
-                tenantId
-            });
+            const isSoftline = tenantId.toLowerCase() === "softlineinfo";
+            let res;
+            try {
+                res = await api.post("/api/v1/auth/login", {
+                    email,
+                    password,
+                    tenantId
+                });
+            } catch (loginError: any) {
+                const errorCode = loginError?.response?.data?.code;
+                if (isSoftline && errorCode === "AUTH_026") {
+                    localStorage.setItem("firstLoginEmail", email);
+                    setFirstLoginEmail(email);
+                    setIsFirstLoginOpen(true);
+                    return;
+                }
+                throw loginError;
+            }
 
             const { success, data } = res.data;
             
@@ -65,6 +93,52 @@ export default function LoginPage() {
             });
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleFirstLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newPassword !== confirmPassword) {
+            addNotification({
+                title: "Senhas diferentes",
+                message: "A nova senha e a confirmação devem ser iguais.",
+                type: "error",
+                category: "security"
+            });
+            return;
+        }
+
+        setIsFirstLoginLoading(true);
+        try {
+            const data = await authApi.firstLogin({
+                login: legacyLogin,
+                senha: legacySenha,
+                newPassword,
+                tenantId: "softlineinfo"
+            });
+
+            if (!data?.token) {
+                throw new Error("Resposta inválida do servidor");
+            }
+
+            setAuthToken(data.token);
+            addNotification({
+                title: "Primeiro acesso concluído",
+                message: "Conta criada com sucesso. Você já está logado.",
+                type: "success",
+                category: "system"
+            });
+            setIsFirstLoginOpen(false);
+            router.push("/dashboard");
+        } catch (error: any) {
+            addNotification({
+                title: "Erro no primeiro acesso",
+                message: error.response?.data?.message || "Falha ao concluir o primeiro acesso.",
+                type: "error",
+                category: "security"
+            });
+        } finally {
+            setIsFirstLoginLoading(false);
         }
     };
 
@@ -272,6 +346,72 @@ export default function LoginPage() {
                         <div className="flex justify-end gap-3 pt-2">
                             <Button type="button" variant="outline" onClick={() => setIsResetOpen(false)}>Cancelar</Button>
                             <Button type="submit" variant="gradient" isLoading={isResetLoading}>Enviar</Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isFirstLoginOpen} onOpenChange={setIsFirstLoginOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Primeiro acesso</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-slate-400 mb-4 text-sm">
+                        Use o usuario e senha do sistema legado para criar sua nova senha.
+                    </p>
+                    <form onSubmit={handleFirstLogin} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+                            <Input
+                                type="email"
+                                value={firstLoginEmail}
+                                readOnly
+                                className="bg-slate-900/50 border-slate-700"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Usuario</label>
+                            <Input
+                                type="text"
+                                placeholder="Usuario do legado"
+                                value={legacyLogin}
+                                onChange={(e) => setLegacyLogin(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Senha</label>
+                            <Input
+                                type="password"
+                                placeholder="Senha do legado"
+                                value={legacySenha}
+                                onChange={(e) => setLegacySenha(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Nova senha</label>
+                            <Input
+                                type="password"
+                                placeholder="Nova senha"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Confirmar nova senha</label>
+                            <Input
+                                type="password"
+                                placeholder="Confirmar nova senha"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <Button type="button" variant="outline" onClick={() => setIsFirstLoginOpen(false)}>Cancelar</Button>
+                            <Button type="submit" variant="gradient" isLoading={isFirstLoginLoading}>Criar acesso</Button>
                         </div>
                     </form>
                 </DialogContent>

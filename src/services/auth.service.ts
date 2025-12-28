@@ -4,6 +4,8 @@ import type {
   LoginResponse,
   RegisterRequest,
   User,
+  FirstLoginRequest,
+  FirstLoginResponse,
   PasswordResetRequestRequest,
   PasswordResetConfirmRequest,
 } from '@/types/auth.types';
@@ -23,6 +25,14 @@ export const authApi = {
    */
   register: async (data: RegisterRequest): Promise<User> => {
     const response = await api.post<ApiResponse<User>>('/api/v1/auth/register', data);
+    return response.data.data!;
+  },
+
+  /**
+   * First login using legacy credentials (softlineinfo only).
+   */
+  firstLogin: async (data: FirstLoginRequest): Promise<FirstLoginResponse> => {
+    const response = await api.post<ApiResponse<FirstLoginResponse>>('/api/v1/auth/first-login', data);
     return response.data.data!;
   },
 

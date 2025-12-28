@@ -26,6 +26,26 @@ export interface RegisterRequest {
 }
 
 /**
+ * First Login (Legacy) Request
+ */
+export interface FirstLoginRequest {
+  login: string;
+  senha: string;
+  newPassword: string;
+  tenantId: string;
+}
+
+/**
+ * First Login Response
+ */
+export interface FirstLoginResponse {
+  message: string;
+  token: string;
+  user: User;
+  expiresAt: string;
+}
+
+/**
  * User
  * Represents an authenticated user
  */
@@ -34,9 +54,11 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  roles?: string[];
   permissions: string[];
   createdAt?: string;
   tenantId?: string;
+  tenantName?: string;
 }
 
 /**
