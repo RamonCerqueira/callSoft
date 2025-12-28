@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  roles?: string[];
   permissions: string[];
   createdAt?: string;
 }
@@ -30,8 +31,9 @@ export function getUserFromToken(): User | null {
       name: decoded.name,
       email: decoded.email,
       role: decoded.role,
+      roles: decoded.roles,
       permissions: decoded.permissions || [],
-      createdAt: decoded.createdAt
+      createdAt: decoded.createdAt,
     };
   } catch (error) {
     console.error("Error decoding token:", error);

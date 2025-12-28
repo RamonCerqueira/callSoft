@@ -62,6 +62,7 @@ const PAGE_SIZE = 12;
 
 export default function KanbanListPage() {
   const [kanbans, setKanbans] = useState<KanbanListItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -78,8 +79,17 @@ export default function KanbanListPage() {
     const fetchKanbans = async () => {
       setLoading(true);
       try {
-        const res = await api.get("/api/v1/kanban");
-        setKanbans(res.data?.data ?? []);
+        const res = await api.get("/api/v1/kanban", {
+          params: {
+            page,
+            pageSize: PAGE_SIZE,
+            search: search || undefined,
+            tipo: filterTipo || undefined,
+          },
+        });
+        const data = res.data?.data;
+        setKanbans(data?.items ?? []);
+        setTotal(data?.total ?? 0);
       } catch (err) {
         console.error("Erro ao buscar kanbans", err);
       } finally {
@@ -87,7 +97,7 @@ export default function KanbanListPage() {
       }
     };
     void fetchKanbans();
-  }, []);
+  }, [page, search, filterTipo]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -163,22 +173,7 @@ export default function KanbanListPage() {
     }
   };
 
-  const filteredKanbans = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const base = kanbans.filter((k) => (filterTipo ? k.tipo === filterTipo : true));
-    const searched = query
-      ? base.filter((k) =>
-          [k.titulo, k.descricao ?? ""].some((value) => value.toLowerCase().includes(query)),
-        )
-      : base;
-
-    const pinned = searched.filter((k) => k.pinned);
-    const rest = searched.filter((k) => !k.pinned);
-    return [...pinned, ...rest];
-  }, [kanbans, filterTipo, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredKanbans.length / PAGE_SIZE));
-  const pagedKanbans = filteredKanbans.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="min-h-screen">
@@ -281,7 +276,7 @@ export default function KanbanListPage() {
                 : "flex flex-col gap-4"
             }
           >
-            {pagedKanbans.map((kanban) => {
+            {kanbans.map((kanban) => {
               const config = tipoConfig[kanban.tipo];
               return (
                 <Card key={kanban.id} variant="glass" hoverable className="h-full">

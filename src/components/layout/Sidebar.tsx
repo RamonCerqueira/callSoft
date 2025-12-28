@@ -14,33 +14,40 @@ import {
     CalendarDays,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { clearAuthToken } from "../../lib/auth";
+import { useAuth } from "@/hooks/auth";
+import { hasPermission } from "@/lib/permissions";
+import { useAuthStore } from "@/store/authStore";
 
 interface NavItem {
     name: string;
     href: string;
     icon: LucideIcon;
+    requiredPermissions?: string | string[];
 }
 
 const navItems: NavItem[] = [
-    { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Tickets", href: "/tickets", icon: Ticket },
+    { name: "Dashboard", href: "/dashboard", icon: Home, requiredPermissions: "dashboard:read" },
+    { name: "Tickets", href: "/tickets", icon: Ticket, requiredPermissions: "tickets:read" },
     { name: "Empresas", href: "/empresas", icon: Building2 },
-    { name: "Kanban", href: "/kanban", icon: KanbanSquare },
-    { name: "Agenda", href: "/agenda", icon: CalendarDays },
+    { name: "Kanban", href: "/kanban", icon: KanbanSquare, requiredPermissions: "kanban:read" },
+    { name: "Agenda", href: "/agenda", icon: CalendarDays, requiredPermissions: "kanban:read" },
     // { name: "Contatos WhatsApp", href: "/whatsapp/contatos", icon: ListChecks },
     { name: "Config Chatbot", href: "/whatsapp/config", icon: Settings },
-    { name: "Relatórios", href: "/reports", icon: BarChart3 },
-    { name: "Configurações", href: "/settings", icon: Settings },
+    { name: "Relatórios", href: "/reports", icon: BarChart3, requiredPermissions: "metrics:read" },
+    { name: "Configurações", href: "/settings", icon: Settings, requiredPermissions: "roles:manage" },
     // { name: "Criar Empresa", href: "/settings/criar-empresa", icon: Building2 },
-    { name: "Usuario", href: "/settings/criar-usuario", icon: User2Icon },
+    { name: "Usuario", href: "/settings/criar-usuario", icon: User2Icon, requiredPermissions: "usuarios:read" },
 ];
 
 export function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
+    const { data: authUser } = useAuth();
+    const queryClient = useQueryClient();
+    const clearAuth = useAuthStore((state) => state.clearAuth);
 
     const handleLogout = async () => {
         try {
@@ -49,6 +56,8 @@ export function Sidebar() {
             console.error("Logout failed", error);
         } finally {
             clearAuthToken();
+            clearAuth();
+            queryClient.clear();
             router.push("/login");
         }
     };
@@ -61,6 +70,11 @@ export function Sidebar() {
         },
         retry: false
     });
+
+    const permissions = authUser?.permissions ?? userProfile?.permissions;
+    const roleLabel =
+        userProfile?.role ||
+        (Array.isArray(userProfile?.roles) && userProfile.roles.length > 0 ? userProfile.roles[0] : undefined);
 
     return (
         <aside className="fixed left-0 top-0 z-40 h-screen w-64 glass border-r border-white/10">
@@ -76,7 +90,11 @@ export function Sidebar() {
 
             {/* Navigation */}
             <nav className="flex flex-col gap-2 p-4">
-                {navItems.map((item) => {
+                {navItems
+                  .filter((item) =>
+                    item.requiredPermissions ? hasPermission(permissions, item.requiredPermissions) : true,
+                  )
+                  .map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
 
@@ -112,7 +130,7 @@ export function Sidebar() {
                             <div className="flex items-center gap-1.5">
                                 <span className={`h-1.5 w-1.5 rounded-full ${userProfile?.isActive ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'bg-slate-500'}`} />
                                 <p className="text-xs text-slate-400 truncate">
-                                    {userProfile?.role === 'admin' ? 'Administrador' : (userProfile?.role || 'Online')}
+                                    {roleLabel === 'admin' ? 'Administrador' : (roleLabel || 'Online')}
                                 </p>
                             </div>
                         </div>

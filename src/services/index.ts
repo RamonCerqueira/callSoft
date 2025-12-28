@@ -11,3 +11,5 @@ export * from './metrics.service';
 export * from './notifications.service';
 export * from './empresas.service';
 export * from './usuarios.service';
+export * from './roles.service';
+export * from './users.service';

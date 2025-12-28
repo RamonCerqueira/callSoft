@@ -3,8 +3,9 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AuthGuard } from "./AuthGuard";
+import { PermissionBoundary } from "./PermissionBoundary";
 
-const PUBLIC_ROUTES = ["/login", "/password-reset"];
+const PUBLIC_ROUTES = ["/login", "/password-reset", "/first-login"];
 
 function isPublicRoute(pathname: string | null): boolean {
   if (!pathname) return true;
@@ -18,6 +19,9 @@ export function AuthBoundary({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  return <AuthGuard>{children}</AuthGuard>;
+  return (
+    <AuthGuard>
+      <PermissionBoundary>{children}</PermissionBoundary>
+    </AuthGuard>
+  );
 }
-
