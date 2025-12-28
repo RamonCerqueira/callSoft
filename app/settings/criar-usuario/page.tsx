@@ -62,7 +62,7 @@ export default function UsuariosPage() {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    return res.data.caminho; // ex: /uploads/usuarios/10.jpg
+    return res.data.data.caminho; // ex: /uploads/users/tenant/10.jpg
   }
 
   /* =========================
@@ -134,9 +134,9 @@ export default function UsuariosPage() {
       // Se houver foto, fazer upload e associar (se a API permitir update logo em seguida)
       if (foto && res.data.success && res.data.data.codUsu) {
           try {
-             const caminhoFoto = await uploadFoto(foto);
+             const caminhoWeb = await uploadFoto(foto);
              // Aqui precisaria de um endpoint para atualizar o usuário com a foto
-             await api.put(`/api/v1/usuarios/${res.data.data.codUsu}`, { caminhoFoto });
+             await api.put(`/api/v1/usuarios/${res.data.data.codUsu}`, { caminhoWeb });
           } catch (e) {
              console.error("Erro ao fazer upload da foto após registro", e);
           }
@@ -181,17 +181,17 @@ export default function UsuariosPage() {
   ========================== */
   const updateMutation = useMutation({
     mutationFn: async () => {
-      let caminhoFoto = usuarioEdit.caminhoFoto;
+      let caminhoWeb = usuarioEdit.caminhoWeb;
 
       if (novaFoto) {
-        caminhoFoto = await uploadFoto(novaFoto);
+        caminhoWeb = await uploadFoto(novaFoto);
       }
 
       return api.put(`/api/v1/usuarios/${usuarioEdit.codUsu}`, {
         login: usuarioEdit.login,
         senha: usuarioEdit.senha || undefined,
         email: usuarioEdit.email || null,
-        caminhoFoto,
+        caminhoWeb,
       });
     },
     onSuccess: () => {
@@ -523,9 +523,9 @@ export default function UsuariosPage() {
                       <tr key={u.codUsu} className="hover:bg-slate-700/20 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
-                            {u.caminhoFoto ? (
+                            {u.caminhoWeb ? (
                               <img
-                                src={u.caminhoFoto}
+                                src={u.caminhoWeb}
                                 className="w-10 h-10 rounded-full object-cover border border-slate-600"
                               />
                             ) : (
@@ -573,9 +573,9 @@ export default function UsuariosPage() {
 
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-4 justify-center mb-6">
-                 {usuarioEdit?.caminhoFoto && !novaFoto && (
+                 {usuarioEdit?.caminhoWeb && !novaFoto && (
                     <img
-                      src={usuarioEdit.caminhoFoto}
+                      src={usuarioEdit.caminhoWeb}
                       className="w-24 h-24 rounded-full object-cover border-2 border-slate-600"
                     />
                   )}
