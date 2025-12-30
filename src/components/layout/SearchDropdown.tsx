@@ -48,7 +48,7 @@ export function SearchDropdown() {
         queryKey: ['search-tickets', debouncedSearchTerm],
         queryFn: async () => {
             if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) return { items: [], total: 0 };
-            return await ticketsApi.list({ text: debouncedSearchTerm, limit: 5 });
+            return await ticketsApi.list({ text: debouncedSearchTerm, pageSize: 5 });
         },
         enabled: debouncedSearchTerm.length >= 2,
     });
